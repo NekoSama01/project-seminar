@@ -3,6 +3,9 @@
         android:label="fishing_guide_app"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="AIzaSyAZA8GRSHGNpxao6luOqUqt7qSFceZUnqE"/>
         <activity
             android:name=".MainActivity"
             android:exported="true"

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
-class FishingPage extends StatelessWidget {
+class BaitPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Center(child: Text('หน้าเบ็ดตกปลา')),
+      body: Center(child: Text('หน้าเหยื่อตกปลา')),
     );
   }
 }
