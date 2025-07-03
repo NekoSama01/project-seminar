@@ -1,3 +1,5 @@
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:fishing_guide_app/screens/LoginPage.dart';
 import 'package:flutter/material.dart';
 import 'package:fishing_guide_app/screens/BookPage.dart';
 import 'package:fishing_guide_app/screens/FishPage.dart';
@@ -5,8 +7,8 @@ import 'package:fishing_guide_app/screens/BaitPage.dart';
 import 'package:fishing_guide_app/screens/HomePage.dart';
 import 'package:fishing_guide_app/screens/MapPage.dart';
 import 'package:fishing_guide_app/screens/RodPage.dart';
-import 'package:firebase_core/firebase_core.dart'; // 👈 เพิ่ม
-import 'firebase_options.dart'; // 👈 ใช้ถ้าคุณใช้ `flutterfire configure`
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -24,9 +26,38 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
-        scaffoldBackgroundColor: Colors.blue[50],
+        scaffoldBackgroundColor: Colors.white,
       ),
-      home: HomeScreen(),
+      home: AuthWrapper(),
+    );
+  }
+}
+
+// Changed to StatefulWidget
+class AuthWrapper extends StatefulWidget {
+  @override
+  _AuthWrapperState createState() => _AuthWrapperState();
+}
+
+class _AuthWrapperState extends State<AuthWrapper> {
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.active) {
+          final user = snapshot.data;
+          if (user == null) {
+            return LoginPage();
+          }
+          return HomeScreen();
+        }
+        return Scaffold(
+          body: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
     );
   }
 }
@@ -54,9 +85,27 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Future<void> _signOut() async {
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      print('Error signing out: $e');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: AppBar(
+        title: Text('Fishing Guide', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.blue[800],
+        actions: [
+          IconButton(
+            icon: Icon(Icons.logout, color: Colors.white),
+            onPressed: _signOut,
+          ),
+        ],
+      ),
       body: Container(
         decoration: BoxDecoration(
           gradient: LinearGradient(
