@@ -1,4 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fishing_guide_app/provider/fish_provider.dart';
 import 'package:fishing_guide_app/screens/LoginPage.dart';
 import 'package:flutter/material.dart';
 import 'package:fishing_guide_app/screens/BookPage.dart';
@@ -9,13 +11,19 @@ import 'package:fishing_guide_app/screens/MapPage.dart';
 import 'package:fishing_guide_app/screens/RodPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  runApp(MyApp());
+  runApp(MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => FishProvider()),
+      ],
+      child: MyApp(),
+  ));
 }
 
 class MyApp extends StatelessWidget {
@@ -33,7 +41,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Changed to StatefulWidget
 class AuthWrapper extends StatefulWidget {
   @override
   _AuthWrapperState createState() => _AuthWrapperState();
@@ -69,15 +76,26 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  final List<Widget> _pages = [];
 
-  final List<Widget> _pages = [
-    HomePage(),
-    RodPage(),
-    BaitPage(),
-    FishPage(),
-    MapPage(),
-    BookPage(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+
+    // ✅ ปลอดภัย: เรียก fetchFishes หลัง build แรกเสร็จ
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<FishProvider>(context, listen: false).fetchFishes();
+    });
+
+    _pages.addAll([
+      HomePage(),
+      RodPage(),
+      BaitPage(),
+      FishPage(),
+      MapPage(),
+      BookPage(),
+    ]);
+  }
 
   void _onTap(int index) {
     setState(() {
