@@ -25,37 +25,37 @@ class BaitProvider with ChangeNotifier {
     } catch (e) {
       _error = 'เกิดข้อผิดพลาดในการโหลดข้อมูลเหยื่อ: $e';
       _baitList = null;
-      if (kDebugMode) {
-        print(_error);
-      }
     } finally {
       _isLoading = false;
       notifyListeners();
     }
   }
 
-  // ฟังก์ชันช่วยเหลือสำหรับการแสดงข้อมูล
-  String getBaitNameTH(QueryDocumentSnapshot bait) {
-    return bait['nameTH'] ?? 'ไม่มีชื่อ';
+  // ฟังก์ชันช่วยเลือกสีตามประเภทเหยื่อ
+  Color getTypeColor(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'พลาสติก':
+        return Colors.blue.shade100;
+      case 'ธรรมชาติ':
+        return Colors.green.shade100;
+      case 'แป้ง':
+        return Colors.orange.shade100;
+      default:
+        return Colors.grey.shade100;
+    }
   }
 
-  String getBaitImageUrl(QueryDocumentSnapshot bait) {
-    return bait['imageUrl'] ?? '';
-  }
-
-  String getBaitType(QueryDocumentSnapshot bait) {
-    return bait['type'] ?? 'ไม่ระบุประเภท';
-  }
-
-  String getBaitColor(QueryDocumentSnapshot bait) {
-    return bait['color'] ?? 'ไม่ระบุสี';
-  }
-
-  String getBaitSize(QueryDocumentSnapshot bait) {
-    return bait['size'] ?? 'ไม่ระบุขนาด';
-  }
-
-  String getBaitBestFor(QueryDocumentSnapshot bait) {
-    return bait['bestFor'] ?? 'ใช้ได้กับปลาทุกชนิด';
+  // ฟังก์ชันช่วยเลือกสีข้อความตามประเภทเหยื่อ
+  Color getTypeTextColor(String? type) {
+    switch (type?.toLowerCase()) {
+      case 'พลาสติก':
+        return Colors.blue.shade800;
+      case 'ธรรมชาติ':
+        return Colors.green.shade800;
+      case 'แป้ง':
+        return Colors.orange.shade800;
+      default:
+        return Colors.grey.shade800;
+    }
   }
 }

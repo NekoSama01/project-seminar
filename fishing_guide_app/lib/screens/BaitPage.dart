@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:fishing_guide_app/provider/bait_provider.dart';
 
 class BaitPage extends StatefulWidget {
   @override
@@ -6,37 +8,25 @@ class BaitPage extends StatefulWidget {
 }
 
 class _BaitPageState extends State<BaitPage> {
-  final List<Map<String, dynamic>> baitData = [
-    {
-      'name': 'เหยื่อปลอม',
-      'type': 'พลาสติก',
-      'description': 'เหยื่อสังเคราะห์รูปร่างคล้ายปลาเล็กหรือกบ',
-      'image': 'images/baits/เหยื่อปลอม.png',
-      'target': 'ปลากด, ปลาช่อน'
-    },
-    {
-      'name': 'เหยื่อมีชีวิต',
-      'type': 'ธรรมชาติ',
-      'description': 'เช่น หนอน, กุ้ง, ปลาเล็ก นำมาใช้เป็นเหยื่อสด',
-      'image': 'images/baits/เหยื่อมีชีวิต.png',
-      'target': 'ปลานิล, ปลาตะเพียน'
-    },
-    {
-      'name': 'เหยื่อผสม',
-      'type': 'แป้ง',
-      'description': 'เหยื่อที่ทำจากแป้งผสมกับส่วนผสมอื่นๆ',
-      'image': 'images/baits/เหยื่อผสม.png',
-      'target': 'ปลาสวาย, ปลาเทโพ'
-    },
-  ];
+  @override
+  void initState() {
+    super.initState();
+    // Fetch data when page loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<BaitProvider>(context, listen: false).fetchBaits();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    final baitProvider = Provider.of<BaitProvider>(context);
+
     return Scaffold(
       backgroundColor: Colors.transparent,
       body: Center(
         child: Container(
-          margin: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.05),
+          margin: EdgeInsets.symmetric(
+              horizontal: MediaQuery.of(context).size.width * 0.05),
           height: MediaQuery.of(context).size.height * 0.8,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -46,7 +36,7 @@ class _BaitPageState extends State<BaitPage> {
                 color: Colors.black26,
                 blurRadius: 10,
                 offset: Offset(0, 4),
-              )
+              ),
             ],
           ),
           child: Column(
@@ -68,9 +58,9 @@ class _BaitPageState extends State<BaitPage> {
                     Text(
                       'เหยื่อตกปลาแต่ละชนิด',
                       style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold),
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -78,79 +68,106 @@ class _BaitPageState extends State<BaitPage> {
               
               // Content
               Expanded(
-                child: ListView.builder(
-                  padding: EdgeInsets.all(16),
-                  itemCount: baitData.length,
-                  itemBuilder: (context, index) {
-                    final bait = baitData[index];
-                    return Card(
-                      margin: EdgeInsets.only(bottom: 12),
-                      elevation: 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                      child: Padding(
-                        padding: EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 30,
-                                  backgroundImage: AssetImage(bait['image']),
-                                ),
-                                SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      bait['name'],
-                                      style: TextStyle(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.blue[800]),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Chip(
-                                      label: Text(bait['type']),
-                                      backgroundColor: bait['type'] == 'พลาสติก' 
-                                          ? Colors.blue[100] 
-                                          : bait['type'] == 'ธรรมชาติ'
-                                            ? Colors.green[100]
-                                            : Colors.orange[100],
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 8),
-                            Text(bait['description']),
-                            SizedBox(height: 4),
-                            Row(
-                              children: [
-                                Icon(Icons.set_meal, size: 16, color: Colors.red),
-                                SizedBox(width: 4),
-                                Text(
-                                  'เหมาะสำหรับ: ${bait['target']}',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      color: Colors.red[800],
-                                      fontStyle: FontStyle.italic),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
+                child: _buildBaitList(context, baitProvider),
               ),
             ],
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildBaitList(BuildContext context, BaitProvider baitProvider) {
+    if (baitProvider.isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+
+    if (baitProvider.error != null) {
+      return Center(child: Text(baitProvider.error!));
+    }
+
+    if (baitProvider.baitList == null || baitProvider.baitList!.isEmpty) {
+      return Center(child: Text('ไม่พบข้อมูลเหยื่อตกปลา'));
+    }
+
+    return ListView.builder(
+      padding: EdgeInsets.all(16),
+      itemCount: baitProvider.baitList!.length,
+      itemBuilder: (context, index) {
+        final bait = baitProvider.baitList![index].data() as Map<String, dynamic>;
+        return Card(
+          margin: EdgeInsets.only(bottom: 12),
+          elevation: 2,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 30,
+                      backgroundImage: NetworkImage(
+                        bait['imageUrl'] ?? 'https://via.placeholder.com/60'),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            bait['nameTH'] ?? bait['name'] ?? 'ไม่มีชื่อ',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[800]),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            bait['nameEN'] ?? 'No Name',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700]),
+                          ),
+                          SizedBox(height: 4),
+                          Chip(
+                            label: Text(
+                              bait['type'] ?? 'ไม่ระบุประเภท',
+                              style: TextStyle(
+                                color: baitProvider.getTypeTextColor(bait['type']),
+                              ),
+                            ),
+                            backgroundColor: baitProvider.getTypeColor(bait['type']),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8),
+                Text(bait['description'] ?? 'ไม่มีคำอธิบาย'),
+                SizedBox(height: 4),
+                Row(
+                  children: [
+                    Icon(Icons.set_meal, size: 16, color: Colors.red),
+                    SizedBox(width: 4),
+                    Text(
+                      'เหมาะสำหรับ: ${bait['target'] ?? 'ไม่ระบุปลาเป้าหมาย'}',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.red[800],
+                        fontStyle: FontStyle.italic),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 }

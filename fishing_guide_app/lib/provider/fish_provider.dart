@@ -30,22 +30,4 @@ class FishProvider with ChangeNotifier {
       notifyListeners();
     }
   }
-
-  String getSizeText(String? size) {
-    switch (size) {
-      case 'large': return 'ใหญ่';
-      case 'medium': return 'กลาง';
-      case 'small': return 'เล็ก';
-      default: return 'ไม่ระบุขนาด';
-    }
-  }
-
-  Color? getSizeColor(String? size) {
-    switch (size) {
-      case 'large': return Colors.blue[100];
-      case 'medium': return Colors.green[100];
-      case 'small': return Colors.orange[100];
-      default: return Colors.grey[200];
-    }
-  }
 }

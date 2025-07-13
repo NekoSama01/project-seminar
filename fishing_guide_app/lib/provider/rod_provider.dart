@@ -11,6 +11,34 @@ class RodProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  // Function to get color based on rod type
+  Color getRodTypeColor(String type) {
+    switch (type) {
+      case 'แบบดั้งเดิม':
+        return Colors.brown.shade400; // Traditional color
+      case 'แบบสมัยใหม่':
+        return Colors.blue.shade400; // Modern color
+      case 'แบบมืออาชีพ':
+        return Colors.red.shade400; // Professional color
+      default:
+        return Colors.grey.shade400;
+    }
+  }
+
+  // Function to get icon based on rod type
+  IconData getRodTypeIcon(String type) {
+    switch (type) {
+      case 'แบบดั้งเดิม':
+        return Icons.history; // Traditional icon
+      case 'แบบสมัยใหม่':
+        return Icons.auto_awesome; // Modern icon
+      case 'แบบมืออาชีพ':
+        return Icons.workspace_premium; // Professional icon
+      default:
+        return Icons.category;
+    }
+  }
+
   Future<void> fetchRods() async {
     try {
       _isLoading = true;
@@ -25,37 +53,9 @@ class RodProvider with ChangeNotifier {
     } catch (e) {
       _error = 'เกิดข้อผิดพลาดในการโหลดข้อมูลคันเบ็ด: $e';
       _rodList = null;
-      if (kDebugMode) {
-        print(_error);
-      }
     } finally {
       _isLoading = false;
       notifyListeners();
     }
-  }
-
-  // ฟังก์ชันช่วยเหลือสำหรับการแสดงข้อมูล
-  String getRodNameTH(QueryDocumentSnapshot rod) {
-    return rod['nameTH'] ?? 'ไม่มีชื่อ';
-  }
-
-  String getRodImageUrl(QueryDocumentSnapshot rod) {
-    return rod['imageUrl'] ?? '';
-  }
-
-  String getRodType(QueryDocumentSnapshot rod) {
-    return rod['type'] ?? 'ไม่ระบุประเภท';
-  }
-
-  String getRodLength(QueryDocumentSnapshot rod) {
-    return rod['length'] ?? 'ไม่ระบุความยาว';
-  }
-
-  String getRodMaterial(QueryDocumentSnapshot rod) {
-    return rod['material'] ?? 'ไม่ระบุวัสดุ';
-  }
-
-  String getRodAction(QueryDocumentSnapshot rod) {
-    return rod['action'] ?? 'ไม่ระบุการทำงาน';
   }
 }
