@@ -33,7 +33,7 @@ class _FishPageState extends State<FishPage> {
           ),
           child: Column(
             children: [
-              // Header (เหมือนเดิม)
+              // Header
               Container(
                 padding: EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -65,7 +65,7 @@ class _FishPageState extends State<FishPage> {
             ],
           ),
         ),
-        ),
+      ),
     );
   }
 
@@ -106,27 +106,42 @@ class _FishPageState extends State<FishPage> {
                         fish['imageUrl'] ?? 'https://via.placeholder.com/60'),
                     ),
                     SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          fish['nameTH'] ?? 'ไม่มีชื่อ',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue[800]),
-                        ),
-                        SizedBox(height: 4),
-                        Chip(
-                          label: Text(fishProvider.getSizeText(fish['size'])),
-                          backgroundColor: fishProvider.getSizeColor(fish['size']),
-                        ),
-                      ],
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            fish['nameTH'] ?? 'ไม่มีชื่อ',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.blue[800]),
+                          ),
+                          SizedBox(height: 4),
+                          Row(
+                            children: [
+                              _buildMeasurementChip(
+                                icon: Icons.straighten,
+                                value: '${fish['average length'] ?? 'N/A'} cm',
+                                color: Colors.blue[100]!,
+                              ),
+                              SizedBox(width: 8),
+                            ],
+                          ),
+                          Row(children: [
+                            _buildMeasurementChip(
+                              icon: Icons.monitor_weight,
+                              value: '${fish['average weight'] ?? 'N/A'} kg',
+                            color: Colors.green[100]!,
+                              ),
+                          ]),
+                        ],
+                      ),
                     ),
                   ],
                 ),
                 SizedBox(height: 8),
-                Text(fish['description'] ?? 'ไม่มีคำอธิบาย'),
+                Text(fish['more'] ?? 'ไม่มีคำอธิบาย'),
                 SizedBox(height: 4),
                 Row(
                   children: [
@@ -158,6 +173,19 @@ class _FishPageState extends State<FishPage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildMeasurementChip({required IconData icon, required String value, required Color color}) {
+    return Chip(
+      backgroundColor: color,
+      avatar: Icon(icon, size: 16),
+      label: Text(
+        value,
+        style: TextStyle(fontSize: 12),
+      ),
+      padding: EdgeInsets.symmetric(horizontal: 4),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );
   }
 }

@@ -1,6 +1,8 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:fishing_guide_app/provider/bait_provider.dart';
 import 'package:fishing_guide_app/provider/fish_provider.dart';
+import 'package:fishing_guide_app/provider/rod_provider.dart';
 import 'package:fishing_guide_app/screens/LoginPage.dart';
 import 'package:flutter/material.dart';
 import 'package:fishing_guide_app/screens/BookPage.dart';
@@ -21,6 +23,8 @@ void main() async {
   runApp(MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => FishProvider()),
+        ChangeNotifierProvider(create: (_) => BaitProvider()),
+        ChangeNotifierProvider(create: (_) => RodProvider()),
       ],
       child: MyApp(),
   ));
@@ -85,6 +89,8 @@ class _HomeScreenState extends State<HomeScreen> {
     // ✅ ปลอดภัย: เรียก fetchFishes หลัง build แรกเสร็จ
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<FishProvider>(context, listen: false).fetchFishes();
+      Provider.of<BaitProvider>(context, listen: false).fetchBaits();
+      Provider.of<RodProvider>(context, listen: false).fetchRods();
     });
 
     _pages.addAll([
