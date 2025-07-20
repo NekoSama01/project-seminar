@@ -1,3 +1,4 @@
+import 'package:fishing_guide_app/screens/detail_screens/FishDetailPage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fishing_guide_app/provider/fish_provider.dart';
@@ -104,138 +105,154 @@ class _FishPageState extends State<FishPage> {
             fishProvider.fishList![index].data() as Map<String, dynamic>;
         final documentId = fishProvider.fishList![index].id;
 
-        return Card(
-          margin: EdgeInsets.only(bottom: 12),
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    FutureBuilder<ImageProvider?>(
-                      future: fishProvider.getFishImage(documentId),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          return Tooltip(
-                            message: 'ไม่สามารถโหลดรูปภาพ: ${snapshot.error}',
-                            child: CircleAvatar(
-                              radius: 30,
-                              backgroundColor: Colors.red[100],
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    color: Colors.red,
-                                    size: 20,
-                                  ),
-                                  Text(
-                                    'ERROR',
-                                    style: TextStyle(
-                                      fontSize: 8,
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) =>
+                        FishDetailPage(fishData: fish, documentId: documentId),
+              ),
+            );
+          },
+          child: Card(
+            margin: EdgeInsets.only(bottom: 12),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      FutureBuilder<ImageProvider?>(
+                        future: fishProvider.getFishImage(documentId),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) {
+                            return Tooltip(
+                              message: 'ไม่สามารถโหลดรูปภาพ: ${snapshot.error}',
+                              child: CircleAvatar(
+                                radius: 30,
+                                backgroundColor: Colors.red[100],
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
                                       color: Colors.red,
+                                      size: 20,
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      'ERROR',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        }
+                            );
+                          }
 
-                        if (snapshot.connectionState == ConnectionState.done &&
-                            snapshot.hasData &&
-                            snapshot.data != null) {
+                          if (snapshot.connectionState ==
+                                  ConnectionState.done &&
+                              snapshot.hasData &&
+                              snapshot.data != null) {
+                            return CircleAvatar(
+                              radius: 30,
+                              backgroundImage: snapshot.data,
+                            );
+                          }
+
+                          // Loading state
                           return CircleAvatar(
                             radius: 30,
-                            backgroundImage: snapshot.data,
+                            backgroundColor: Colors.grey[200],
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.grey,
+                              ),
+                            ),
                           );
-                        }
-
-                        // Loading state
-                        return CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Colors.grey[200],
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.grey,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            fish['nameTH'] ?? 'ไม่มีชื่อ',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue[800],
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            fish['nameEN'] ?? 'No Name',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700]),
-                          ),
-                          SizedBox(height: 4),
-                          Row(
-                            children: [
-                              _buildMeasurementChip(
-                                icon: Icons.straighten,
-                                value: '${fish['average length'] ?? 'N/A'} cm',
-                                color: Colors.blue[100]!,
-                              ),
-                              SizedBox(width: 8),
-                            ],
-                          ),
-                          Row(
-                            children: [
-                              _buildMeasurementChip(
-                                icon: Icons.monitor_weight,
-                                value: '${fish['average weight'] ?? 'N/A'} kg',
-                                color: Colors.green[100]!,
-                              ),
-                            ],
-                          ),
-                        ],
+                        },
                       ),
-                    ),
-                  ],
-                ),
-                Row(
-                  children: [
-                    Icon(Icons.location_on, size: 16, color: Colors.grey),
-                    SizedBox(width: 4),
-                    Text(
-                      'ถิ่นอาศัย: ${fish['habitat'] ?? 'ไม่ระบุ'}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                    SizedBox(width: 4),
-                    Text(
-                      'ฤดู: ${fish['seasons']?.join(', ') ?? 'ตลอดปี'}',
-                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                    ),
-                  ],
-                ),
-              ],
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              fish['nameTH'] ?? 'ไม่มีชื่อ',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue[800],
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              fish['nameEN'] ?? 'No Name',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Row(
+                              children: [
+                                _buildMeasurementChip(
+                                  icon: Icons.straighten,
+                                  value:
+                                      '${fish['average length'] ?? 'N/A'} cm',
+                                  color: Colors.blue[100]!,
+                                ),
+                                SizedBox(width: 8),
+                              ],
+                            ),
+                            Row(
+                              children: [
+                                _buildMeasurementChip(
+                                  icon: Icons.monitor_weight,
+                                  value:
+                                      '${fish['average weight'] ?? 'N/A'} kg',
+                                  color: Colors.green[100]!,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, size: 16, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text(
+                        'ถิ่นอาศัย: ${fish['habitat'] ?? 'ไม่ระบุ'}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.calendar_today, size: 16, color: Colors.grey),
+                      SizedBox(width: 4),
+                      Text(
+                        'ฤดู: ${fish['seasons']?.join(', ') ?? 'ตลอดปี'}',
+                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );

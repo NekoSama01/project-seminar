@@ -1,3 +1,4 @@
+import 'package:fishing_guide_app/screens/detail_screens/BaitDetailPage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fishing_guide_app/provider/bait_provider.dart';
@@ -12,9 +13,9 @@ class _BaitPageState extends State<BaitPage> {
     try {
       await Provider.of<BaitProvider>(context, listen: false).fetchBaits();
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: $e')));
     }
   }
 
@@ -76,7 +77,7 @@ class _BaitPageState extends State<BaitPage> {
                   ],
                 ),
               ),
-              
+
               // Content with RefreshIndicator
               Expanded(
                 child: RefreshIndicator(
@@ -108,149 +109,163 @@ class _BaitPageState extends State<BaitPage> {
       padding: EdgeInsets.all(16),
       itemCount: baitProvider.baitList!.length,
       itemBuilder: (context, index) {
-        final bait = baitProvider.baitList![index].data() as Map<String, dynamic>;
+        final bait =
+            baitProvider.baitList![index].data() as Map<String, dynamic>;
         final documentId = baitProvider.baitList![index].id;
         final baitType = bait['type'] ?? 'ไม่ระบุประเภท';
         final typeColor = baitProvider.getTypeColor(baitType);
         final textColor = baitProvider.getTypeTextColor(baitType);
 
-        return Card(
-          margin: EdgeInsets.only(bottom: 12),
-          elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: Padding(
-            padding: EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Image loading with FutureBuilder
-                    FutureBuilder<ImageProvider?>(
-                      future: baitProvider.getBaitImage(documentId),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasError) {
-                          return Tooltip(
-                            message: 'ไม่สามารถโหลดรูปภาพ: ${snapshot.error}',
-                            child: CircleAvatar(
-                              radius: 30,
-                              backgroundColor: Colors.red[100],
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    Icons.error_outline,
-                                    color: Colors.red,
-                                    size: 20,
-                                  ),
-                                  Text(
-                                    'ERROR',
-                                    style: TextStyle(
-                                      fontSize: 8,
+        return InkWell(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) =>
+                        BaitDetailPage(baitData: bait, documentId: documentId),
+              ),
+            );
+          },
+          child: Card(
+            margin: EdgeInsets.only(bottom: 12),
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // Image loading with FutureBuilder
+                      FutureBuilder<ImageProvider?>(
+                        future: baitProvider.getBaitImage(documentId),
+                        builder: (context, snapshot) {
+                          if (snapshot.hasError) {
+                            return Tooltip(
+                              message: 'ไม่สามารถโหลดรูปภาพ: ${snapshot.error}',
+                              child: CircleAvatar(
+                                radius: 30,
+                                backgroundColor: Colors.red[100],
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.error_outline,
                                       color: Colors.red,
+                                      size: 20,
                                     ),
-                                  ),
-                                ],
+                                    Text(
+                                      'ERROR',
+                                      style: TextStyle(
+                                        fontSize: 8,
+                                        color: Colors.red,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
+                          if (snapshot.connectionState ==
+                                  ConnectionState.done &&
+                              snapshot.hasData &&
+                              snapshot.data != null) {
+                            return CircleAvatar(
+                              radius: 30,
+                              backgroundImage: snapshot.data,
+                            );
+                          }
+
+                          // Loading state
+                          return CircleAvatar(
+                            radius: 30,
+                            backgroundColor: Colors.grey[200],
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              valueColor: AlwaysStoppedAnimation<Color>(
+                                Colors.grey,
                               ),
                             ),
                           );
-                        }
-
-                        if (snapshot.connectionState == ConnectionState.done &&
-                            snapshot.hasData &&
-                            snapshot.data != null) {
-                          return CircleAvatar(
-                            radius: 30,
-                            backgroundImage: snapshot.data,
-                          );
-                        }
-
-                        // Loading state
-                        return CircleAvatar(
-                          radius: 30,
-                          backgroundColor: Colors.grey[200],
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.grey,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            bait['nameTH'] ?? bait['name'] ?? 'ไม่มีชื่อ',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue[800],
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            bait['nameEN'] ?? 'No Name',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey[700],
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Chip(
-                            label: Text(
-                              baitType,
-                              style: TextStyle(color: textColor),
-                            ),
-                            backgroundColor: typeColor,
-                          ),
-                        ],
+                        },
                       ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 8),
-                Text(
-                  bait['description'] ?? 'ไม่มีคำอธิบาย',
-                  style: TextStyle(color: Colors.grey[800]),
-                ),
-                SizedBox(height: 4),
-                Row(
-                  children: [
-                    Icon(Icons.set_meal, size: 16, color: Colors.red),
-                    SizedBox(width: 4),
-                    Text(
-                      'เหมาะสำหรับ: ${bait['target'] ?? 'ไม่ระบุปลาเป้าหมาย'}',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.red[800],
-                        fontStyle: FontStyle.italic,
-                      ),
-                    ),
-                  ],
-                ),
-                SizedBox(height: 4),
-                if (bait['price'] != null) ...[
-                  Row(
-                    children: [
-                      Icon(Icons.attach_money, size: 16, color: Colors.green),
-                      SizedBox(width: 4),
-                      Text(
-                        'ราคา: ${bait['price']}',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.green[800],
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              bait['nameTH'] ?? bait['name'] ?? 'ไม่มีชื่อ',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue[800],
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Text(
+                              bait['nameEN'] ?? 'No Name',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                            SizedBox(height: 4),
+                            Chip(
+                              label: Text(
+                                baitType,
+                                style: TextStyle(color: textColor),
+                              ),
+                              backgroundColor: typeColor,
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
+                  SizedBox(height: 8),
+                  Text(
+                    bait['description'] ?? 'ไม่มีคำอธิบาย',
+                    style: TextStyle(color: Colors.grey[800]),
+                  ),
+                  SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.set_meal, size: 16, color: Colors.red),
+                      SizedBox(width: 4),
+                      Text(
+                        'เหมาะสำหรับ: ${bait['target'] ?? 'ไม่ระบุปลาเป้าหมาย'}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.red[800],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ],
+                  ),
+                  SizedBox(height: 4),
+                  if (bait['price'] != null) ...[
+                    Row(
+                      children: [
+                        Icon(Icons.attach_money, size: 16, color: Colors.green),
+                        SizedBox(width: 4),
+                        Text(
+                          'ราคา: ${bait['price']}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.green[800],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         );

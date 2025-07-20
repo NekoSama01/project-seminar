@@ -14,18 +14,28 @@ class BaitProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String? get error => _error;
 
+  // Convert target fish data to a readable format
+  // In your BaitProvider class
+  List<String> convertTarget(dynamic target) {
+    if (target == null) return [];
+    if (target is List)
+      return List<String>.from(target.map((e) => e.toString()));
+    if (target is String)
+      return target.split(',').map((e) => e.trim()).toList();
+    return [target.toString()];
+  }
+
   Future<void> fetchBaits() async {
     try {
       _isLoading = true;
       notifyListeners();
 
-      final snapshot = await FirebaseFirestore.instance
-          .collection('baits')
-          .get();
+      final snapshot =
+          await FirebaseFirestore.instance.collection('baits').get();
 
       _baitList = snapshot.docs;
       _error = null;
-      
+
       // Pre-cache images in the background
       _precacheImages();
     } catch (e) {
@@ -39,7 +49,7 @@ class BaitProvider with ChangeNotifier {
 
   Future<void> _precacheImages() async {
     if (_baitList == null) return;
-    
+
     for (final doc in _baitList!) {
       final imageUrl = doc['image_url'] as String?;
       if (imageUrl != null && imageUrl.isNotEmpty) {
@@ -50,35 +60,35 @@ class BaitProvider with ChangeNotifier {
 
   Future<ImageProvider?> getBaitImage(String documentId) async {
     if (_baitList == null) return null;
-    
+
     final doc = _baitList!.firstWhere(
       (doc) => doc.id == documentId,
       orElse: () => throw Exception('Document not found'),
     );
-    
+
     final imageUrl = doc['image_url'] as String?;
     if (imageUrl == null || imageUrl.isEmpty) return null;
-    
+
     return await _getImageProvider(imageUrl);
   }
 
   Future<ImageProvider> _getImageProvider(String imageUrl) async {
     // Convert URL if it's a GS URL
     final convertedUrl = _convertGsToHttpsUrl(imageUrl);
-    
+
     // Check cache first
     if (_imageCache.containsKey(convertedUrl)) {
       return _imageCache[convertedUrl]!;
     }
-    
+
     // Download and cache the image
     try {
       final file = await _cacheManager.getSingleFile(convertedUrl);
       final imageProvider = FileImage(file);
-      
+
       // Store in memory cache
       _imageCache[convertedUrl] = imageProvider;
-      
+
       return imageProvider;
     } catch (e) {
       debugPrint('Failed to load bait image: $e');
@@ -94,7 +104,7 @@ class BaitProvider with ChangeNotifier {
 
   Future<void> precacheAllImages(BuildContext context) async {
     if (_baitList == null) return;
-    
+
     for (final doc in _baitList!) {
       final imageUrl = doc['image_url'] as String?;
       if (imageUrl != null) {
@@ -112,12 +122,12 @@ class BaitProvider with ChangeNotifier {
 
   String _convertGsToHttpsUrl(String gsUrl) {
     if (!gsUrl.startsWith('gs://')) return gsUrl;
-    
+
     final uri = gsUrl.substring(5); // Remove 'gs://'
     final parts = uri.split('/');
     final bucket = parts[0];
     final path = parts.sublist(1).join('/');
-    
+
     return 'https://firebasestorage.googleapis.com/v0/b/$bucket/o/${Uri.encodeComponent(path)}?alt=media';
   }
 

@@ -90,10 +90,13 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final fishProvider = Provider.of<FishProvider>(context, listen: false);
       final rodProvider = Provider.of<RodProvider>(context, listen: false);
+      final baitProvider = Provider.of<BaitProvider>(context, listen: false);
       fishProvider.fetchFishes().then((_) {
         fishProvider.precacheAllImages(context); // โหลดรูปล่วงหน้า
       });
-      Provider.of<BaitProvider>(context, listen: false).fetchBaits();
+      Provider.of<BaitProvider>(context, listen: false).fetchBaits().then((_) {
+        baitProvider.precacheAllImages(context); // โหลดรูปล่วงหน้า
+      });
       Provider.of<RodProvider>(context, listen: false).fetchRods().then((_) {
         rodProvider.precacheAllImages(context); // โหลดรูปล่วงหน้า
       });
