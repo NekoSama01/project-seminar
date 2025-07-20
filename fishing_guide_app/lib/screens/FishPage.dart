@@ -8,7 +8,15 @@ class FishPage extends StatefulWidget {
 }
 
 class _FishPageState extends State<FishPage> {
-  bool _initialized = false;
+  Future<void> _refreshData(BuildContext context) async {
+    try {
+      await Provider.of<FishProvider>(context, listen: false).fetchFishes();
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: $e')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -18,7 +26,9 @@ class _FishPageState extends State<FishPage> {
       backgroundColor: Colors.transparent,
       body: Center(
         child: Container(
-          margin: EdgeInsets.symmetric(horizontal: MediaQuery.of(context).size.width * 0.05),
+          margin: EdgeInsets.symmetric(
+            horizontal: MediaQuery.of(context).size.width * 0.05,
+          ),
           height: MediaQuery.of(context).size.height * 0.8,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -28,7 +38,7 @@ class _FishPageState extends State<FishPage> {
                 color: Colors.black26,
                 blurRadius: 10,
                 offset: Offset(0, 4),
-              )
+              ),
             ],
           ),
           child: Column(
@@ -52,15 +62,19 @@ class _FishPageState extends State<FishPage> {
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
-                        fontWeight: FontWeight.bold),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
               ),
-              
+
               // Fish list content
               Expanded(
-                child: _buildFishList(context, fishProvider),
+                child: RefreshIndicator(
+                  onRefresh: () => _refreshData(context),
+                  child: _buildFishList(context, fishProvider),
+                ),
               ),
             ],
           ),
@@ -86,7 +100,10 @@ class _FishPageState extends State<FishPage> {
       padding: EdgeInsets.all(16),
       itemCount: fishProvider.fishList!.length,
       itemBuilder: (context, index) {
-        final fish = fishProvider.fishList![index].data() as Map<String, dynamic>;
+        final fish =
+            fishProvider.fishList![index].data() as Map<String, dynamic>;
+        final documentId = fishProvider.fishList![index].id;
+
         return Card(
           margin: EdgeInsets.only(bottom: 12),
           elevation: 2,
@@ -100,10 +117,57 @@ class _FishPageState extends State<FishPage> {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundImage: NetworkImage(
-                        fish['imageUrl'] ?? 'https://via.placeholder.com/60'),
+                    FutureBuilder<ImageProvider?>(
+                      future: fishProvider.getFishImage(documentId),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Tooltip(
+                            message: 'ไม่สามารถโหลดรูปภาพ: ${snapshot.error}',
+                            child: CircleAvatar(
+                              radius: 30,
+                              backgroundColor: Colors.red[100],
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                  Text(
+                                    'ERROR',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (snapshot.connectionState == ConnectionState.done &&
+                            snapshot.hasData &&
+                            snapshot.data != null) {
+                          return CircleAvatar(
+                            radius: 30,
+                            backgroundImage: snapshot.data,
+                          );
+                        }
+
+                        // Loading state
+                        return CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.grey[200],
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.grey,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     SizedBox(width: 12),
                     Expanded(
@@ -115,7 +179,15 @@ class _FishPageState extends State<FishPage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[800]),
+                              color: Colors.blue[800],
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            fish['nameEN'] ?? 'No Name',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[700]),
                           ),
                           SizedBox(height: 4),
                           Row(
@@ -128,30 +200,27 @@ class _FishPageState extends State<FishPage> {
                               SizedBox(width: 8),
                             ],
                           ),
-                          Row(children: [
-                            _buildMeasurementChip(
-                              icon: Icons.monitor_weight,
-                              value: '${fish['average weight'] ?? 'N/A'} kg',
-                            color: Colors.green[100]!,
+                          Row(
+                            children: [
+                              _buildMeasurementChip(
+                                icon: Icons.monitor_weight,
+                                value: '${fish['average weight'] ?? 'N/A'} kg',
+                                color: Colors.green[100]!,
                               ),
-                          ]),
+                            ],
+                          ),
                         ],
                       ),
                     ),
                   ],
                 ),
-                SizedBox(height: 8),
-                Text(fish['more'] ?? 'ไม่มีคำอธิบาย'),
-                SizedBox(height: 4),
                 Row(
                   children: [
                     Icon(Icons.location_on, size: 16, color: Colors.grey),
                     SizedBox(width: 4),
                     Text(
                       'ถิ่นอาศัย: ${fish['habitat'] ?? 'ไม่ระบุ'}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -162,9 +231,7 @@ class _FishPageState extends State<FishPage> {
                     SizedBox(width: 4),
                     Text(
                       'ฤดู: ${fish['seasons']?.join(', ') ?? 'ตลอดปี'}',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600]),
+                      style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                     ),
                   ],
                 ),
@@ -176,14 +243,15 @@ class _FishPageState extends State<FishPage> {
     );
   }
 
-  Widget _buildMeasurementChip({required IconData icon, required String value, required Color color}) {
+  Widget _buildMeasurementChip({
+    required IconData icon,
+    required String value,
+    required Color color,
+  }) {
     return Chip(
       backgroundColor: color,
       avatar: Icon(icon, size: 16),
-      label: Text(
-        value,
-        style: TextStyle(fontSize: 12),
-      ),
+      label: Text(value, style: TextStyle(fontSize: 12)),
       padding: EdgeInsets.symmetric(horizontal: 4),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
     );

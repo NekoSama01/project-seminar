@@ -8,10 +8,19 @@ class BaitPage extends StatefulWidget {
 }
 
 class _BaitPageState extends State<BaitPage> {
+  Future<void> _refreshData(BuildContext context) async {
+    try {
+      await Provider.of<BaitProvider>(context, listen: false).fetchBaits();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: $e')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    // Fetch data when page loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<BaitProvider>(context, listen: false).fetchBaits();
     });
@@ -26,7 +35,8 @@ class _BaitPageState extends State<BaitPage> {
       body: Center(
         child: Container(
           margin: EdgeInsets.symmetric(
-              horizontal: MediaQuery.of(context).size.width * 0.05),
+            horizontal: MediaQuery.of(context).size.width * 0.05,
+          ),
           height: MediaQuery.of(context).size.height * 0.8,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -60,15 +70,19 @@ class _BaitPageState extends State<BaitPage> {
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 20,
-                        fontWeight: FontWeight.bold),
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ],
                 ),
               ),
               
-              // Content
+              // Content with RefreshIndicator
               Expanded(
-                child: _buildBaitList(context, baitProvider),
+                child: RefreshIndicator(
+                  onRefresh: () => _refreshData(context),
+                  child: _buildBaitList(context, baitProvider),
+                ),
               ),
             ],
           ),
@@ -95,6 +109,11 @@ class _BaitPageState extends State<BaitPage> {
       itemCount: baitProvider.baitList!.length,
       itemBuilder: (context, index) {
         final bait = baitProvider.baitList![index].data() as Map<String, dynamic>;
+        final documentId = baitProvider.baitList![index].id;
+        final baitType = bait['type'] ?? 'ไม่ระบุประเภท';
+        final typeColor = baitProvider.getTypeColor(baitType);
+        final textColor = baitProvider.getTypeTextColor(baitType);
+
         return Card(
           margin: EdgeInsets.only(bottom: 12),
           elevation: 2,
@@ -108,10 +127,58 @@ class _BaitPageState extends State<BaitPage> {
               children: [
                 Row(
                   children: [
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundImage: NetworkImage(
-                        bait['imageUrl'] ?? 'https://via.placeholder.com/60'),
+                    // Image loading with FutureBuilder
+                    FutureBuilder<ImageProvider?>(
+                      future: baitProvider.getBaitImage(documentId),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Tooltip(
+                            message: 'ไม่สามารถโหลดรูปภาพ: ${snapshot.error}',
+                            child: CircleAvatar(
+                              radius: 30,
+                              backgroundColor: Colors.red[100],
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                  Text(
+                                    'ERROR',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (snapshot.connectionState == ConnectionState.done &&
+                            snapshot.hasData &&
+                            snapshot.data != null) {
+                          return CircleAvatar(
+                            radius: 30,
+                            backgroundImage: snapshot.data,
+                          );
+                        }
+
+                        // Loading state
+                        return CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.grey[200],
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.grey,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     SizedBox(width: 12),
                     Expanded(
@@ -123,24 +190,24 @@ class _BaitPageState extends State<BaitPage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.blue[800]),
+                              color: Colors.blue[800],
+                            ),
                           ),
                           SizedBox(height: 4),
                           Text(
                             bait['nameEN'] ?? 'No Name',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[700]),
+                              color: Colors.grey[700],
+                            ),
                           ),
                           SizedBox(height: 4),
                           Chip(
                             label: Text(
-                              bait['type'] ?? 'ไม่ระบุประเภท',
-                              style: TextStyle(
-                                color: baitProvider.getTypeTextColor(bait['type']),
-                              ),
+                              baitType,
+                              style: TextStyle(color: textColor),
                             ),
-                            backgroundColor: baitProvider.getTypeColor(bait['type']),
+                            backgroundColor: typeColor,
                           ),
                         ],
                       ),
@@ -148,7 +215,10 @@ class _BaitPageState extends State<BaitPage> {
                   ],
                 ),
                 SizedBox(height: 8),
-                Text(bait['description'] ?? 'ไม่มีคำอธิบาย'),
+                Text(
+                  bait['description'] ?? 'ไม่มีคำอธิบาย',
+                  style: TextStyle(color: Colors.grey[800]),
+                ),
                 SizedBox(height: 4),
                 Row(
                   children: [
@@ -159,10 +229,27 @@ class _BaitPageState extends State<BaitPage> {
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.red[800],
-                        fontStyle: FontStyle.italic),
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ],
                 ),
+                SizedBox(height: 4),
+                if (bait['price'] != null) ...[
+                  Row(
+                    children: [
+                      Icon(Icons.attach_money, size: 16, color: Colors.green),
+                      SizedBox(width: 4),
+                      Text(
+                        'ราคา: ${bait['price']}',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.green[800],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),

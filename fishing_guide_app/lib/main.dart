@@ -88,9 +88,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
     // ✅ ปลอดภัย: เรียก fetchFishes หลัง build แรกเสร็จ
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      Provider.of<FishProvider>(context, listen: false).fetchFishes();
+      final fishProvider = Provider.of<FishProvider>(context, listen: false);
+      final rodProvider = Provider.of<RodProvider>(context, listen: false);
+      fishProvider.fetchFishes().then((_) {
+        fishProvider.precacheAllImages(context); // โหลดรูปล่วงหน้า
+      });
       Provider.of<BaitProvider>(context, listen: false).fetchBaits();
-      Provider.of<RodProvider>(context, listen: false).fetchRods();
+      Provider.of<RodProvider>(context, listen: false).fetchRods().then((_) {
+        rodProvider.precacheAllImages(context); // โหลดรูปล่วงหน้า
+      });
     });
 
     _pages.addAll([

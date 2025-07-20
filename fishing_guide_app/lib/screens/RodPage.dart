@@ -8,10 +8,19 @@ class RodPage extends StatefulWidget {
 }
 
 class _RodPageState extends State<RodPage> {
+  Future<void> _refreshData(BuildContext context) async {
+    try {
+      await Provider.of<RodProvider>(context, listen: false).fetchRods();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: $e')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
-    // ดึงข้อมูลเมื่อหน้าโหลด
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<RodProvider>(context, listen: false).fetchRods();
     });
@@ -26,7 +35,8 @@ class _RodPageState extends State<RodPage> {
       body: Center(
         child: Container(
           margin: EdgeInsets.symmetric(
-              horizontal: MediaQuery.of(context).size.width * 0.05),
+            horizontal: MediaQuery.of(context).size.width * 0.05,
+          ),
           height: MediaQuery.of(context).size.height * 0.8,
           decoration: BoxDecoration(
             color: Colors.white,
@@ -66,9 +76,12 @@ class _RodPageState extends State<RodPage> {
                 ),
               ),
               
-              // Content
+              // Content with RefreshIndicator
               Expanded(
-                child: _buildRodList(context, rodProvider),
+                child: RefreshIndicator(
+                  onRefresh: () => _refreshData(context),
+                  child: _buildRodList(context, rodProvider),
+                ),
               ),
             ],
           ),
@@ -95,6 +108,7 @@ class _RodPageState extends State<RodPage> {
       itemCount: rodProvider.rodList!.length,
       itemBuilder: (context, index) {
         final rod = rodProvider.rodList![index].data() as Map<String, dynamic>;
+        final documentId = rodProvider.rodList![index].id;
         final rodType = rod['type'] ?? 'ไม่ระบุประเภท';
         final rodColor = rodProvider.getRodTypeColor(rodType);
         final rodIcon = rodProvider.getRodTypeIcon(rodType);
@@ -112,11 +126,58 @@ class _RodPageState extends State<RodPage> {
               children: [
                 Row(
                   children: [
-                    // Keep the original image display
-                    CircleAvatar(
-                      radius: 30,
-                      backgroundImage: NetworkImage(
-                        rod['imageUrl'] ?? 'https://via.placeholder.com/60'),
+                    // Image loading with FutureBuilder
+                    FutureBuilder<ImageProvider?>(
+                      future: rodProvider.getRodImage(documentId),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasError) {
+                          return Tooltip(
+                            message: 'ไม่สามารถโหลดรูปภาพ: ${snapshot.error}',
+                            child: CircleAvatar(
+                              radius: 30,
+                              backgroundColor: Colors.red[100],
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.error_outline,
+                                    color: Colors.red,
+                                    size: 20,
+                                  ),
+                                  Text(
+                                    'ERROR',
+                                    style: TextStyle(
+                                      fontSize: 8,
+                                      color: Colors.red,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (snapshot.connectionState == ConnectionState.done &&
+                            snapshot.hasData &&
+                            snapshot.data != null) {
+                          return CircleAvatar(
+                            radius: 30,
+                            backgroundImage: snapshot.data,
+                          );
+                        }
+
+                        // Loading state
+                        return CircleAvatar(
+                          radius: 30,
+                          backgroundColor: Colors.grey[200],
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                              Colors.grey,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                     SizedBox(width: 12),
                     Expanded(
