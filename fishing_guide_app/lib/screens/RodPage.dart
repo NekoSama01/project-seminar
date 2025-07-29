@@ -13,9 +13,13 @@ class _RodPageState extends State<RodPage> {
     try {
       await Provider.of<RodProvider>(context, listen: false).fetchRods();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: ${e.toString()}'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      debugPrint('Error refreshing rod data: $e');
     }
   }
 
@@ -31,9 +35,15 @@ class _RodPageState extends State<RodPage> {
   Widget build(BuildContext context) {
     final rodProvider = Provider.of<RodProvider>(context);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Center(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.blue[50]!, Colors.blue[100]!],
+        ),
+      ),
+      child: Center(
         child: Container(
           margin: EdgeInsets.symmetric(
             horizontal: MediaQuery.of(context).size.width * 0.05,
@@ -94,15 +104,52 @@ class _RodPageState extends State<RodPage> {
 
   Widget _buildRodList(BuildContext context, RodProvider rodProvider) {
     if (rodProvider.isLoading) {
-      return Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[800]!),
+        ),
+      );
     }
 
     if (rodProvider.error != null) {
-      return Center(child: Text(rodProvider.error!));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, color: Colors.red, size: 48),
+            SizedBox(height: 16),
+            Text(
+              'เกิดข้อผิดพลาด: ${rodProvider.error}',
+              style: TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _refreshData(context),
+              child: Text('ลองใหม่'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[800],
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     if (rodProvider.rodList == null || rodProvider.rodList!.isEmpty) {
-      return Center(child: Text('ไม่พบข้อมูลคันเบ็ด'));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
+            Text('ไม่พบข้อมูลคันเบ็ด'),
+            TextButton(
+              onPressed: () => _refreshData(context),
+              child: Text('รีเฟรชข้อมูล'),
+            ),
+          ],
+        ),
+      );
     }
 
     return ListView.builder(
@@ -119,10 +166,14 @@ class _RodPageState extends State<RodPage> {
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder:
-                    (context) =>
-                        RodDetailPage(rodData: rod, documentId: documentId),
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => RodDetailPage(
+                  rodData: rod,
+                  documentId: documentId,
+                ),
+                transitionsBuilder: (_, animation, __, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
               ),
             );
           },
@@ -139,7 +190,6 @@ class _RodPageState extends State<RodPage> {
                 children: [
                   Row(
                     children: [
-                      // Image loading with FutureBuilder
                       FutureBuilder<ImageProvider?>(
                         future: rodProvider.getRodImage(documentId),
                         builder: (context, snapshot) {
@@ -170,8 +220,7 @@ class _RodPageState extends State<RodPage> {
                             );
                           }
 
-                          if (snapshot.connectionState ==
-                                  ConnectionState.done &&
+                          if (snapshot.connectionState == ConnectionState.done &&
                               snapshot.hasData &&
                               snapshot.data != null) {
                             return CircleAvatar(
@@ -180,7 +229,6 @@ class _RodPageState extends State<RodPage> {
                             );
                           }
 
-                          // Loading state
                           return CircleAvatar(
                             radius: 30,
                             backgroundColor: Colors.grey[200],
@@ -214,7 +262,9 @@ class _RodPageState extends State<RodPage> {
                                 color: Colors.grey[700],
                               ),
                             ),
-                            Row(
+                            SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
                               children: [
                                 _buildMeasurementChip(
                                   icon: rodIcon,
@@ -222,7 +272,20 @@ class _RodPageState extends State<RodPage> {
                                   color: rodColor.withOpacity(0.2),
                                   textColor: rodColor,
                                 ),
-                                SizedBox(width: 8),
+                                if (rod['length'] != null)
+                                  _buildMeasurementChip(
+                                    icon: Icons.straighten,
+                                    value: '${rod['length']} เมตร',
+                                    color: Colors.blue[100]!,
+                                    textColor: Colors.blue[800]!,
+                                  ),
+                                if (rod['action'] != null)
+                                  _buildMeasurementChip(
+                                    icon: Icons.speed,
+                                    value: rod['action'],
+                                    color: Colors.green[100]!,
+                                    textColor: Colors.green[800]!,
+                                  ),
                               ],
                             ),
                           ],
@@ -235,7 +298,7 @@ class _RodPageState extends State<RodPage> {
                     rod['description'] ?? 'ไม่มีคำอธิบาย',
                     style: TextStyle(color: Colors.grey[800]),
                   ),
-                  SizedBox(height: 4),
+                  SizedBox(height: 8),
                   Row(
                     children: [
                       Icon(Icons.attach_money, size: 16, color: Colors.grey),
@@ -244,9 +307,17 @@ class _RodPageState extends State<RodPage> {
                         'ราคา: ${rod['price'] ?? 'ไม่ระบุ'}',
                         style: TextStyle(fontSize: 12, color: Colors.grey[600]),
                       ),
+                      Spacer(),
+                      if (rod['power'] != null) ...[
+                        Icon(Icons.fitness_center, size: 16, color: Colors.grey),
+                        SizedBox(width: 4),
+                        Text(
+                          'แรงต้าน: ${rod['power']}',
+                          style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                        ),
+                      ],
                     ],
                   ),
-                  SizedBox(height: 4),
                 ],
               ),
             ),

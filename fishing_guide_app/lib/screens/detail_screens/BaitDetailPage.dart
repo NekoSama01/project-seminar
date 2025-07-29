@@ -14,76 +14,71 @@ class BaitDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final baitProvider = Provider.of<BaitProvider>(context, listen: false);
-    final targetFish = baitProvider.convertTarget(baitData['target']);
-    final baitType = baitData['type']?.toString() ?? 'ไม่ระบุประเภท';
-    final typeColor = baitProvider.getTypeColor(baitType);
-    final textColor = baitProvider.getTypeTextColor(baitType);
-    final price = baitData['price']?.toString();
-    final description = baitData['description']?.toString();
-
     return Scaffold(
       appBar: AppBar(
         title: Text(baitData['nameTH']?.toString() ?? 'รายละเอียดเหยื่อ'),
         backgroundColor: Colors.blue[800],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Bait Image
-            _buildBaitImage(context, baitProvider),
-            const SizedBox(height: 24),
-
-            // Basic Information Section
-            _buildSectionHeader('ข้อมูลพื้นฐาน'),
-            _buildDetailItem('ชื่อไทย', baitData['nameTH']?.toString() ?? 'ไม่ระบุ'),
-            _buildDetailItem('ชื่ออังกฤษ', baitData['nameEN']?.toString() ?? 'ไม่ระบุ'),
-            
-            // Type with colored chip
-            _buildTypeChip(baitType, typeColor, textColor),
-
-            // Price if available
-            if (price != null && price.isNotEmpty)
-              _buildDetailItem('ราคา', '$price บาท'),
-
-            // Target Fish Section
-            _buildTargetFishSection(targetFish),
-
-            // Description Section
-            if (description != null && description.isNotEmpty)
-              _buildDescriptionSection(description),
-          ],
-        ),
+      body: Consumer<BaitProvider>(
+        builder: (context, baitProvider, _) {
+          final targetFish = baitProvider.convertTarget(baitData['target']);
+          final baitType = baitData['type']?.toString() ?? 'ไม่ระบุประเภท';
+          final typeColor = baitProvider.getTypeColor(baitType);
+          final textColor = baitProvider.getTypeTextColor(baitType);
+          
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _BaitImageSection(
+                  documentId: documentId,
+                  baitProvider: baitProvider,
+                ),
+                const SizedBox(height: 24),
+                _BasicInfoSection(
+                  baitData: baitData,
+                  baitType: baitType,
+                  typeColor: typeColor,
+                  textColor: textColor,
+                ),
+                _TargetFishSection(targetFish: targetFish),
+                if (baitData['description']?.toString().isNotEmpty ?? false)
+                  _DescriptionSection(
+                    description: baitData['description']!.toString(),
+                  ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
+}
 
-  Widget _buildBaitImage(BuildContext context, BaitProvider baitProvider) {
+// แยก Widget ย่อยเป็นคลาสต่างๆ
+class _BaitImageSection extends StatelessWidget {
+  final String documentId;
+  final BaitProvider baitProvider;
+
+  const _BaitImageSection({
+    required this.documentId,
+    required this.baitProvider,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Center(
       child: FutureBuilder<ImageProvider?>(
         future: baitProvider.getBaitImage(documentId),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: const Center(child: CircularProgressIndicator()),
+            return _buildImagePlaceholder(
+              child: const CircularProgressIndicator(),
             );
           }
           if (snapshot.hasError) {
-            return Container(
-              width: 200,
-              height: 200,
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(10),
-              ),
+            return _buildImagePlaceholder(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
@@ -93,7 +88,7 @@ class BaitDetailPage extends StatelessWidget {
               ),
             );
           }
-          if (snapshot.hasData && snapshot.data != null) {
+          if (snapshot.hasData) {
             return Container(
               width: 200,
               height: 200,
@@ -106,21 +101,69 @@ class BaitDetailPage extends StatelessWidget {
               ),
             );
           }
-          return Container(
-            width: 200,
-            height: 200,
-            decoration: BoxDecoration(
-              color: Colors.grey[200],
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: const Center(child: Text('ไม่มีรูปภาพ')),
+          return _buildImagePlaceholder(
+            child: const Text('ไม่มีรูปภาพ'),
           );
         },
       ),
     );
   }
 
-  Widget _buildTypeChip(String baitType, Color typeColor, Color textColor) {
+  Widget _buildImagePlaceholder({required Widget child}) {
+    return Container(
+      width: 200,
+      height: 200,
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Center(child: child),
+    );
+  }
+}
+
+class _BasicInfoSection extends StatelessWidget {
+  final Map<String, dynamic> baitData;
+  final String baitType;
+  final Color typeColor;
+  final Color textColor;
+
+  const _BasicInfoSection({
+    required this.baitData,
+    required this.baitType,
+    required this.typeColor,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const _SectionHeader('ข้อมูลพื้นฐาน'),
+        _DetailItem(label: 'ชื่อไทย', value: baitData['nameTH']?.toString() ?? 'ไม่ระบุ'),
+        _DetailItem(label: 'ชื่ออังกฤษ', value: baitData['nameEN']?.toString() ?? 'ไม่ระบุ'),
+        _TypeChip(baitType: baitType, typeColor: typeColor, textColor: textColor),
+        if (baitData['price']?.toString().isNotEmpty ?? false)
+          _DetailItem(label: 'ราคา', value: '${baitData['price']} บาท'),
+      ],
+    );
+  }
+}
+
+class _TypeChip extends StatelessWidget {
+  final String baitType;
+  final Color typeColor;
+  final Color textColor;
+
+  const _TypeChip({
+    required this.baitType,
+    required this.typeColor,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       child: Row(
@@ -153,25 +196,43 @@ class BaitDetailPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildTargetFishSection(List<String> targetFish) {
+class _TargetFishSection extends StatelessWidget {
+  final List<String> targetFish;
+
+  const _TargetFishSection({
+    required this.targetFish,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('ปลาเป้าหมาย'),
+        const _SectionHeader('ปลาเป้าหมาย'),
         if (targetFish.isNotEmpty)
-          _buildChipList(targetFish)
+          _ChipList(items: targetFish)
         else
-          _buildDetailItem('ปลาเป้าหมาย', 'ไม่ระบุ'),
+          const _DetailItem(label: 'ปลาเป้าหมาย', value: 'ไม่ระบุ'),
       ],
     );
   }
+}
 
-  Widget _buildDescriptionSection(String description) {
+class _DescriptionSection extends StatelessWidget {
+  final String description;
+
+  const _DescriptionSection({
+    required this.description,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader('คำอธิบาย'),
+        const _SectionHeader('คำอธิบาย'),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Text(
@@ -182,8 +243,16 @@ class BaitDetailPage extends StatelessWidget {
       ],
     );
   }
+}
 
-  Widget _buildSectionHeader(String title) {
+// Widget ย่อยที่ใช้ร่วมกัน
+class _SectionHeader extends StatelessWidget {
+  final String title;
+
+  const _SectionHeader(this.title);
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.only(top: 16, bottom: 8),
       child: Text(
@@ -196,8 +265,19 @@ class BaitDetailPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildDetailItem(String label, String value) {
+class _DetailItem extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _DetailItem({
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
       child: Row(
@@ -221,8 +301,17 @@ class BaitDetailPage extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildChipList(List<String> items) {
+class _ChipList extends StatelessWidget {
+  final List<String> items;
+
+  const _ChipList({
+    required this.items,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Wrap(

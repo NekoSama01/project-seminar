@@ -45,12 +45,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatefulWidget {
-  @override
-  _AuthWrapperState createState() => _AuthWrapperState();
-}
-
-class _AuthWrapperState extends State<AuthWrapper> {
+class AuthWrapper extends StatelessWidget {  // เปลี่ยนเป็น StatelessWidget
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -59,12 +54,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
         if (snapshot.connectionState == ConnectionState.active) {
           final user = snapshot.data;
           if (user == null) {
-            return LoginPage();
+            return LoginPage();  // LoginPage ควรมี Scaffold ของตัวเอง
           }
-          return HomeScreen();
+          return HomeScreen();  // HomeScreen มี Scaffold ของตัวเอง
         }
-        return Scaffold(
-          body: Center(
+        return Scaffold(  // หน้าขณะโหลดก็ต้องมี Scaffold
+          body: Center( 
             child: CircularProgressIndicator(),
           ),
         );
@@ -80,54 +75,94 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
-  final List<Widget> _pages = [];
+  late final List<Widget> _pages;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-
-    // ✅ ปลอดภัย: เรียก fetchFishes หลัง build แรกเสร็จ
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final fishProvider = Provider.of<FishProvider>(context, listen: false);
-      final rodProvider = Provider.of<RodProvider>(context, listen: false);
-      final baitProvider = Provider.of<BaitProvider>(context, listen: false);
-      fishProvider.fetchFishes().then((_) {
-        fishProvider.precacheAllImages(context); // โหลดรูปล่วงหน้า
-      });
-      Provider.of<BaitProvider>(context, listen: false).fetchBaits().then((_) {
-        baitProvider.precacheAllImages(context); // โหลดรูปล่วงหน้า
-      });
-      Provider.of<RodProvider>(context, listen: false).fetchRods().then((_) {
-        rodProvider.precacheAllImages(context); // โหลดรูปล่วงหน้า
-      });
-    });
-
-    _pages.addAll([
+    _pages = [
       HomePage(),
       RodPage(),
       BaitPage(),
       FishPage(),
       MapPage(),
       BookPage(),
-    ]);
+    ];
+    WidgetsBinding.instance.addPostFrameCallback((_) => _initializeData());
   }
 
-  void _onTap(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-  }
-
-  Future<void> _signOut() async {
+  Future<void> _initializeData() async {
     try {
-      await FirebaseAuth.instance.signOut();
+      if (!mounted) return;
+      
+      final fishProvider = Provider.of<FishProvider>(context, listen: false);
+      final rodProvider = Provider.of<RodProvider>(context, listen: false);
+      final baitProvider = Provider.of<BaitProvider>(context, listen: false);
+
+      // Load data sequentially to avoid overwhelming the app
+      await fishProvider.fetchFishes();
+      if (!mounted) return;
+      await fishProvider.precacheAllImages(context);
+      
+      await baitProvider.fetchBaits();
+      if (!mounted) return;
+      await baitProvider.precacheAllImages(context);
+      
+      await rodProvider.fetchRods();
+      if (!mounted) return;
+      await rodProvider.precacheAllImages(context);
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      print('Error signing out: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load data: $e')),
+        );
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
+  void _onTap(int index) {
+    if (mounted) {
+      setState(() {
+        _currentIndex = index;
+      });
+    }
+  }
+
+  Future<void> _signOut() async {
+  try {
+    await FirebaseAuth.instance.signOut();
+    // นำทางไปยังหน้า Login และลบ stack หน้าปัจจุบันทั้งหมด
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (context) => LoginPage()),
+      (Route<dynamic> route) => false,
+    );
+  } catch (e) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('เกิดข้อผิดพลาดในการออกจากระบบ: $e')),
+      );
+    }
+  }
+}
+
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: Text('Fishing Guide', style: TextStyle(color: Colors.white)),
@@ -149,64 +184,68 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         child: _pages[_currentIndex],
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black12,
-              blurRadius: 10,
-              offset: Offset(0, -2),
+      bottomNavigationBar: _buildBottomNavBar(),
+    );
+  }
+
+  Widget _buildBottomNavBar() {
+    return Container(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 10,
+            offset: Offset(0, -2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(15),
+          topRight: Radius.circular(15),
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _currentIndex,
+          onTap: _onTap,
+          items: [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.home_outlined),
+              activeIcon: Icon(Icons.home),
+              label: 'หน้าหลัก',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.anchor_outlined),
+              activeIcon: Icon(Icons.anchor),
+              label: 'คันเบ็ด',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bug_report_outlined),
+              activeIcon: Icon(Icons.bug_report),
+              label: 'เหยื่อ',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.set_meal_outlined),
+              activeIcon: Icon(Icons.set_meal),
+              label: 'ปลา',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.map_outlined),
+              activeIcon: Icon(Icons.map),
+              label: 'แผนที่',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.menu_book_outlined),
+              activeIcon: Icon(Icons.menu_book),
+              label: 'คู่มือ',
             ),
           ],
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.only(
-            topLeft: Radius.circular(15),
-            topRight: Radius.circular(15),
-          ),
-          child: BottomNavigationBar(
-            currentIndex: _currentIndex,
-            onTap: _onTap,
-            items: [
-              BottomNavigationBarItem(
-                icon: Icon(Icons.home_outlined),
-                activeIcon: Icon(Icons.home),
-                label: 'หน้าหลัก',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.anchor_outlined),
-                activeIcon: Icon(Icons.anchor),
-                label: 'คันเบ็ด',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.bug_report_outlined),
-                activeIcon: Icon(Icons.bug_report),
-                label: 'เหยื่อ',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.set_meal_outlined),
-                activeIcon: Icon(Icons.set_meal),
-                label: 'ปลา',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.map_outlined),
-                activeIcon: Icon(Icons.map),
-                label: 'แผนที่',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.menu_book_outlined),
-                activeIcon: Icon(Icons.menu_book),
-                label: 'คู่มือ',
-              ),
-            ],
-            selectedItemColor: Colors.blue[800],
-            unselectedItemColor: Colors.grey[600],
-            selectedFontSize: 12,
-            unselectedFontSize: 12,
-            type: BottomNavigationBarType.fixed,
-            backgroundColor: Colors.white,
-            elevation: 0,
-          ),
+          selectedItemColor: Colors.blue[800],
+          unselectedItemColor: Colors.grey[600],
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          type: BottomNavigationBarType.fixed,
+          backgroundColor: Colors.white,
+          elevation: 0,
         ),
       ),
     );

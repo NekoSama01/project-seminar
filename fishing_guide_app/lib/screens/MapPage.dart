@@ -16,35 +16,25 @@ class _MapPageState extends State<MapPage> {
     Marker(
       markerId: MarkerId('spot1'),
       position: LatLng(13.7563, 100.5018),
-      infoWindow: InfoWindow(title: 'Lumpini Park', snippet: 'Popular fishing spot'),
+      infoWindow: InfoWindow(
+        title: 'Lumpini Park', 
+        snippet: 'Popular fishing spot'
+      ),
       icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
     ),
   };
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Fishing Spots Map',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.blue[50]!, Colors.blue[100]!],
         ),
-        backgroundColor: Colors.blue[600],
-        iconTheme: IconThemeData(color: Colors.white),
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.search),
-            onPressed: () {
-              // Search functionality
-            },
-          ),
-        ],
       ),
-      body: Stack(
+      child: Stack(
         children: [
           GoogleMap(
             initialCameraPosition: _initialPosition,
@@ -52,6 +42,9 @@ class _MapPageState extends State<MapPage> {
             myLocationEnabled: true,
             myLocationButtonEnabled: false, // Disable default button
             markers: _markers,
+            onMapCreated: (GoogleMapController controller) {
+              // You can store the controller if needed
+            },
           ),
           
           // Search bar
@@ -62,7 +55,7 @@ class _MapPageState extends State<MapPage> {
             child: Container(
               padding: EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
-                color: Colors.blue[50],
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(30),
                 boxShadow: [
                   BoxShadow(
@@ -76,24 +69,28 @@ class _MapPageState extends State<MapPage> {
                 decoration: InputDecoration(
                   hintText: 'Search fishing spots...',
                   border: InputBorder.none,
-                  icon: Icon(Icons.location_on, color: Colors.blue[600]),
+                  icon: Icon(Icons.search, color: Colors.blue[600]),
                   suffixIcon: Icon(Icons.tune, color: Colors.blue[600]),
                 ),
+                onTap: () {
+                  // Handle search tap
+                },
               ),
             ),
           ),
           
           // GPS Button (now on bottom-left)
           Positioned(
-            bottom: 80,  // Positioned above add button
+            bottom: 80,
             left: 20,
             child: FloatingActionButton(
               mini: true,
-              backgroundColor: Colors.blue[400],
-              child: Icon(Icons.gps_fixed, color: Colors.white),
+              backgroundColor: Colors.white,
+              child: Icon(Icons.gps_fixed, color: Colors.blue[600]),
               onPressed: () {
                 // Current location functionality
               },
+              elevation: 2,
             ),
           ),
           
@@ -107,6 +104,7 @@ class _MapPageState extends State<MapPage> {
               onPressed: () {
                 // Add new spot functionality
               },
+              elevation: 2,
             ),
           ),
         ],

@@ -13,9 +13,13 @@ class _FishPageState extends State<FishPage> {
     try {
       await Provider.of<FishProvider>(context, listen: false).fetchFishes();
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: ${e.toString()}'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      debugPrint('Error refreshing fish data: $e');
     }
   }
 
@@ -23,9 +27,15 @@ class _FishPageState extends State<FishPage> {
   Widget build(BuildContext context) {
     final fishProvider = Provider.of<FishProvider>(context);
 
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      body: Center(
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.blue[50]!, Colors.blue[100]!],
+        ),
+      ),
+      child: Center(
         child: Container(
           margin: EdgeInsets.symmetric(
             horizontal: MediaQuery.of(context).size.width * 0.05,
@@ -86,33 +96,73 @@ class _FishPageState extends State<FishPage> {
 
   Widget _buildFishList(BuildContext context, FishProvider fishProvider) {
     if (fishProvider.isLoading) {
-      return Center(child: CircularProgressIndicator());
+      return Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue[800]!),
+        ),
+      );
     }
 
     if (fishProvider.error != null) {
-      return Center(child: Text(fishProvider.error!));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.error_outline, color: Colors.red, size: 48),
+            SizedBox(height: 16),
+            Text(
+              'เกิดข้อผิดพลาด: ${fishProvider.error}',
+              style: TextStyle(color: Colors.red),
+              textAlign: TextAlign.center,
+            ),
+            SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () => _refreshData(context),
+              child: Text('ลองใหม่'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue[800],
+              ),
+            ),
+          ],
+        ),
+      );
     }
 
     if (fishProvider.fishList == null || fishProvider.fishList!.isEmpty) {
-      return Center(child: Text('ไม่พบข้อมูลปลา'));
+      return Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(Icons.inbox_outlined, size: 48, color: Colors.grey),
+            Text('ไม่พบข้อมูลปลา'),
+            TextButton(
+              onPressed: () => _refreshData(context),
+              child: Text('รีเฟรชข้อมูล'),
+            ),
+          ],
+        ),
+      );
     }
 
     return ListView.builder(
       padding: EdgeInsets.all(16),
       itemCount: fishProvider.fishList!.length,
       itemBuilder: (context, index) {
-        final fish =
-            fishProvider.fishList![index].data() as Map<String, dynamic>;
+        final fish = fishProvider.fishList![index].data() as Map<String, dynamic>;
         final documentId = fishProvider.fishList![index].id;
 
         return InkWell(
           onTap: () {
             Navigator.push(
               context,
-              MaterialPageRoute(
-                builder:
-                    (context) =>
-                        FishDetailPage(fishData: fish, documentId: documentId),
+              PageRouteBuilder(
+                pageBuilder: (_, __, ___) => FishDetailPage(
+                  fishData: fish,
+                  documentId: documentId,
+                ),
+                transitionsBuilder: (_, animation, __, child) {
+                  return FadeTransition(opacity: animation, child: child);
+                },
               ),
             );
           },
@@ -159,8 +209,7 @@ class _FishPageState extends State<FishPage> {
                             );
                           }
 
-                          if (snapshot.connectionState ==
-                                  ConnectionState.done &&
+                          if (snapshot.connectionState == ConnectionState.done &&
                               snapshot.hasData &&
                               snapshot.data != null) {
                             return CircleAvatar(
@@ -169,7 +218,6 @@ class _FishPageState extends State<FishPage> {
                             );
                           }
 
-                          // Loading state
                           return CircleAvatar(
                             radius: 30,
                             backgroundColor: Colors.grey[200],
@@ -203,26 +251,23 @@ class _FishPageState extends State<FishPage> {
                                 color: Colors.grey[700],
                               ),
                             ),
-                            SizedBox(height: 4),
-                            Row(
+                            SizedBox(height: 8),
+                            Wrap(
+                              spacing: 8,
+                              runSpacing: 4,
                               children: [
                                 _buildMeasurementChip(
                                   icon: Icons.straighten,
-                                  value:
-                                      '${fish['average length'] ?? 'N/A'} cm',
+                                  value: '${fish['average length'] ?? 'N/A'} cm',
                                   color: Colors.blue[100]!,
                                 ),
-                                SizedBox(width: 8),
-                              ],
-                            ),
-                            Row(
-                              children: [
                                 _buildMeasurementChip(
                                   icon: Icons.monitor_weight,
-                                  value:
-                                      '${fish['average weight'] ?? 'N/A'} kg',
+                                  value: '${fish['average weight'] ?? 'N/A'} kg',
                                   color: Colors.green[100]!,
                                 ),
+                                if (fish['difficulty'] != null)
+                                  _buildDifficultyChip(fish['difficulty']),
                               ],
                             ),
                           ],
@@ -230,26 +275,14 @@ class _FishPageState extends State<FishPage> {
                       ),
                     ],
                   ),
-                  Row(
-                    children: [
-                      Icon(Icons.location_on, size: 16, color: Colors.grey),
-                      SizedBox(width: 4),
-                      Text(
-                        'ถิ่นอาศัย: ${fish['habitat'] ?? 'ไม่ระบุ'}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
+                  SizedBox(height: 8),
+                  _buildInfoRow(
+                    icon: Icons.location_on,
+                    text: 'ถิ่นอาศัย: ${fish['habitat'] ?? 'ไม่ระบุ'}',
                   ),
-                  SizedBox(height: 4),
-                  Row(
-                    children: [
-                      Icon(Icons.calendar_today, size: 16, color: Colors.grey),
-                      SizedBox(width: 4),
-                      Text(
-                        'ฤดู: ${fish['seasons']?.join(', ') ?? 'ตลอดปี'}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[600]),
-                      ),
-                    ],
+                  _buildInfoRow(
+                    icon: Icons.calendar_today,
+                    text: 'ฤดู: ${fish['seasons']?.join(', ') ?? 'ตลอดปี'}',
                   ),
                 ],
               ),
@@ -271,6 +304,50 @@ class _FishPageState extends State<FishPage> {
       label: Text(value, style: TextStyle(fontSize: 12)),
       padding: EdgeInsets.symmetric(horizontal: 4),
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
+  Widget _buildDifficultyChip(String difficulty) {
+    Color chipColor;
+    switch (difficulty.toLowerCase()) {
+      case 'ง่าย':
+        chipColor = Colors.green[100]!;
+        break;
+      case 'ปานกลาง':
+        chipColor = Colors.orange[100]!;
+        break;
+      case 'ยาก':
+        chipColor = Colors.red[100]!;
+        break;
+      default:
+        chipColor = Colors.grey[100]!;
+    }
+
+    return Chip(
+      backgroundColor: chipColor,
+      label: Text(
+        'ความยาก: $difficulty',
+        style: TextStyle(fontSize: 12),
+      ),
+      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+    );
+  }
+
+  Widget _buildInfoRow({required IconData icon, required String text}) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey),
+          SizedBox(width: 4),
+          Expanded(
+            child: Text(
+              text,
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
