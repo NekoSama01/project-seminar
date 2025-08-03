@@ -37,6 +37,8 @@ dependencies:
   cloud_firestore: ^5.6.11
   provider: ^6.1.5
   flutter_cache_manager: ^3.3.0
+  flutter_dotenv: ^5.1.0
+  google_maps_webservice: ^0.0.20-nullsafety.5
 
 dev_dependencies:
   flutter_test:
@@ -64,6 +66,7 @@ flutter:
     - images/baits/เหยื่อปลอม.png
     - images/baits/เหยื่อมีชีวิต.png
     - images/baits/เหยื่อผสม.png
+    - .env
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.

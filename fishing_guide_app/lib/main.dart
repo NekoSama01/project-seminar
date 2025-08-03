@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fishing_guide_app/provider/bait_provider.dart';
 import 'package:fishing_guide_app/provider/fish_provider.dart';
 import 'package:fishing_guide_app/provider/rod_provider.dart';
+import 'package:fishing_guide_app/provider/map_provider.dart'; // เพิ่ม import นี้
 import 'package:fishing_guide_app/screens/LoginPage.dart';
 import 'package:flutter/material.dart';
 import 'package:fishing_guide_app/screens/BookPage.dart';
@@ -14,17 +15,21 @@ import 'package:fishing_guide_app/screens/RodPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart'; // เพิ่ม import นี้
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await dotenv.load(fileName: ".env"); // โหลด environment variables
+
   runApp(MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => FishProvider()),
         ChangeNotifierProvider(create: (_) => BaitProvider()),
         ChangeNotifierProvider(create: (_) => RodProvider()),
+        ChangeNotifierProvider(create: (_) => MapProvider()), // เพิ่ม MapProvider เข้ามา
       ],
       child: MyApp(),
   ));

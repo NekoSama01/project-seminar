@@ -1,5 +1,9 @@
+import 'dart:math' as math;
+
+import 'package:fishing_guide_app/provider/map_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
 
 class MapPage extends StatefulWidget {
   @override
@@ -7,108 +11,150 @@ class MapPage extends StatefulWidget {
 }
 
 class _MapPageState extends State<MapPage> {
-  static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(13.7563, 100.5018), // Bangkok coordinates
-    zoom: 12,
-  );
+  GoogleMapController? _mapController;
+  CameraPosition? _initialPosition;
 
-  final Set<Marker> _markers = {
-    Marker(
-      markerId: MarkerId('spot1'),
-      position: LatLng(13.7563, 100.5018),
-      infoWindow: InfoWindow(
-        title: 'Lumpini Park', 
-        snippet: 'Popular fishing spot'
-      ),
-      icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-    ),
-  };
+  @override
+  void initState() {
+    super.initState();
+    _initializeMap();
+  }
+
+  Future<void> _initializeMap() async {
+    final mapProvider = Provider.of<MapProvider>(context, listen: false);
+
+    // ใช้ addPostFrameCallback เพื่อให้ทำงานหลัง build เสร็จ
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await mapProvider.fetchLocations();
+
+      if (mounted) {
+        setState(() {
+          if (mapProvider.markersBounds != null &&
+              mapProvider.markers.isNotEmpty) {
+            _initialPosition = CameraPosition(
+              target: _calculateCenter(mapProvider.markersBounds!),
+              zoom: _calculateZoomLevel(mapProvider.markersBounds!),
+            );
+          } else {
+            _initialPosition = const CameraPosition(
+              target: LatLng(16.74804986504787, 100.19208920772702),
+              zoom: 12,
+            );
+          }
+        });
+      }
+    });
+  }
+
+  LatLng _calculateCenter(LatLngBounds bounds) {
+    return LatLng(
+      (bounds.northeast.latitude + bounds.southwest.latitude) / 2,
+      (bounds.northeast.longitude + bounds.southwest.longitude) / 2,
+    );
+  }
+
+  double _calculateZoomLevel(LatLngBounds bounds) {
+    const double padding = 100; // padding in pixels
+    final double width = MediaQuery.of(context).size.width;
+    final double height = MediaQuery.of(context).size.height;
+
+    final double latDiff =
+        bounds.northeast.latitude - bounds.southwest.latitude;
+    final double lngDiff =
+        bounds.northeast.longitude - bounds.southwest.longitude;
+
+    final double latZoom =
+        (math.log(height * 360 / (256 * latDiff)) / math.ln2) / 2;
+    final double lngZoom =
+        (math.log(width * 360 / (256 * lngDiff)) / math.ln2) / 2;
+
+    return math.min(latZoom, lngZoom) - math.log(padding / 256) / math.ln2;
+  }
+
+  Future<void> _onMapCreated(GoogleMapController controller) async {
+    _mapController = controller;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final mapProvider = Provider.of<MapProvider>(context, listen: false);
+      if (mapProvider.markersBounds != null && mounted) {
+        await _mapController?.animateCamera(
+          CameraUpdate.newLatLngBounds(mapProvider.markersBounds!, 100),
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Colors.blue[50]!, Colors.blue[100]!],
-        ),
-      ),
-      child: Stack(
-        children: [
-          GoogleMap(
-            initialCameraPosition: _initialPosition,
-            mapType: MapType.normal,
-            myLocationEnabled: true,
-            myLocationButtonEnabled: false, // Disable default button
-            markers: _markers,
-            onMapCreated: (GoogleMapController controller) {
-              // You can store the controller if needed
-            },
-          ),
-          
-          // Search bar
-          Positioned(
-            top: 16,
-            left: 16,
-            right: 16,
-            child: Container(
-              padding: EdgeInsets.symmetric(horizontal: 16),
+    // ตรวจสอบ _initialPosition ก่อน build
+    if (_initialPosition == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Consumer<MapProvider>(
+      builder: (context, provider, child) {
+        // ใช้ FutureBuilder เพื่อจัดการสถานะการโหลด
+        return FutureBuilder(
+          future: provider.isLoading ? null : Future.value(),
+          builder: (context, snapshot) {
+            return Container(
               decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(30),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 10,
-                    offset: Offset(0, 4),
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.blue[50]!, Colors.blue[100]!],
+                ),
+              ),
+              child: Stack(
+                children: [
+                  GoogleMap(
+                    initialCameraPosition: _initialPosition!,
+                    mapType: MapType.normal,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: false,
+                    markers: provider.markers,
+                    onMapCreated: _onMapCreated,
+                  ),
+
+                  // ปุ่ม GPS
+                  Positioned(
+                    bottom: 80,
+                    left: 20,
+                    child: FloatingActionButton(
+                      mini: true,
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.gps_fixed, color: Colors.blue[600]),
+                      onPressed: () async {
+                        // เรียกตำแหน่งปัจจุบัน
+                        if (provider.currentLocation != null) {
+                          await _mapController?.animateCamera(
+                            CameraUpdate.newLatLng(provider.currentLocation!),
+                          );
+                        }
+                      },
+                      elevation: 2,
+                    ),
+                  ),
+
+                  // ปุ่มเพิ่มสถานที่
+                  Positioned(
+                    bottom: 20,
+                    left: 20,
+                    child: FloatingActionButton(
+                      backgroundColor: Colors.blue[600],
+                      child: Icon(Icons.add_location, color: Colors.white),
+                      onPressed: () {
+                        // ไปยังหน้าจอเพิ่มสถานที่ใหม่
+                      },
+                      elevation: 2,
+                    ),
                   ),
                 ],
               ),
-              child: TextField(
-                decoration: InputDecoration(
-                  hintText: 'Search fishing spots...',
-                  border: InputBorder.none,
-                  icon: Icon(Icons.search, color: Colors.blue[600]),
-                  suffixIcon: Icon(Icons.tune, color: Colors.blue[600]),
-                ),
-                onTap: () {
-                  // Handle search tap
-                },
-              ),
-            ),
-          ),
-          
-          // GPS Button (now on bottom-left)
-          Positioned(
-            bottom: 80,
-            left: 20,
-            child: FloatingActionButton(
-              mini: true,
-              backgroundColor: Colors.white,
-              child: Icon(Icons.gps_fixed, color: Colors.blue[600]),
-              onPressed: () {
-                // Current location functionality
-              },
-              elevation: 2,
-            ),
-          ),
-          
-          // Add Location Button
-          Positioned(
-            bottom: 20,
-            left: 20,
-            child: FloatingActionButton(
-              backgroundColor: Colors.blue[600],
-              child: Icon(Icons.add_location, color: Colors.white),
-              onPressed: () {
-                // Add new spot functionality
-              },
-              elevation: 2,
-            ),
-          ),
-        ],
-      ),
+            );
+          },
+        );
+      },
     );
   }
 }
