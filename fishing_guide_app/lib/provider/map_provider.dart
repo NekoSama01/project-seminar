@@ -43,6 +43,9 @@ class MapProvider with ChangeNotifier {
           icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueAzure,
           ),
+          onTap: () {
+            // Handle marker tap if needed
+          },
         );
         newMarkers.add(marker);
 
