@@ -57,15 +57,7 @@ dev_dependencies:
 # The following section is specific to Flutter packages.
 flutter:
   assets:
-    - images/rods/rod1.png
-    - images/rods/rod2.png
-    - images/rods/rod3.png
-    - images/fishs/ปลาช่อน.png
-    - images/fishs/ปลานิล.jpg
-    - images/fishs/ปลาสวาย.png
-    - images/baits/เหยื่อปลอม.png
-    - images/baits/เหยื่อมีชีวิต.png
-    - images/baits/เหยื่อผสม.png
+    - images/icons/fishing-area.png
     - .env
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in

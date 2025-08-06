@@ -149,6 +149,82 @@ class _MapPageState extends State<MapPage> {
                       elevation: 2,
                     ),
                   ),
+                  // Overlay ข้อมูล Marker แบบ Custom
+                  if (provider.selectedMarkerData != null &&
+                      provider.selectedMarkerPosition != null)
+                    Positioned(
+                      bottom: 160,
+                      left: 20,
+                      right: 20,
+                      child: Card(
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start, // <<< ตรงนี้คือจุดสำคัญ
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      provider.selectedMarkerData!['name'] ??
+                                          'ไม่มีชื่อ',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.close),
+                                    onPressed: () {
+                                      provider.clearSelectedMarker();
+                                    },
+                                  ),
+                                ],
+                              ),
+                              if (provider.selectedMarkerData!['address'] !=
+                                  null)
+                                Text(
+                                  provider.selectedMarkerData!['address'],
+                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                ),
+                              if (provider.selectedMarkerData!['Contact'] !=
+                                  null)
+                                Text(
+                                  provider.selectedMarkerData!['Contact'],
+                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                ),
+                              if (provider.selectedMarkerData!['fishs'] !=
+                                  null)
+                                Text(
+                                  provider.selectedMarkerData!['fishs'],
+                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                ),
+
+                              SizedBox(height: 8),
+                              // เพิ่มปุ่มอื่นได้
+                              ElevatedButton.icon(
+                                icon: Icon(Icons.directions),
+                                label: Text('นำทาง'),
+                                onPressed: () {
+                                  // ไปยังตำแหน่ง marker
+                                  final pos = provider.selectedMarkerPosition!;
+                                  _mapController?.animateCamera(
+                                    CameraUpdate.newLatLng(pos),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
                 ],
               ),
             );

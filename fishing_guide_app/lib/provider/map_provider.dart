@@ -36,15 +36,12 @@ class MapProvider with ChangeNotifier {
         final marker = Marker(
           markerId: MarkerId(doc.id),
           position: position,
-          infoWindow: InfoWindow(
-            title: data['name'] ?? 'Unknown Location',
-            snippet: data['address'] ?? '',
-          ),
+          infoWindow: InfoWindow.noText, // ไม่ใช้ infoWindow เดิม
           icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueAzure,
           ),
           onTap: () {
-            // Handle marker tap if needed
+            setSelectedMarker(data, position);
           },
         );
         newMarkers.add(marker);
@@ -89,6 +86,41 @@ class MapProvider with ChangeNotifier {
   // ตั้งค่าตำแหน่งปัจจุบัน
   void setCurrentLocation(LatLng location) {
     _currentLocation = location;
+    notifyListeners();
+  }
+  
+  // สำหรับจัดการ marker ที่ถูกเลือก
+  // เพื่อให้สามารถแสดงข้อมูลเพิ่มเติมหรือทำการกระทำอื่นๆ ได้
+  Map<String, dynamic>? _selectedMarkerData;
+  LatLng? _selectedMarkerPosition;
+
+  Map<String, dynamic>? get selectedMarkerData => _selectedMarkerData;
+  LatLng? get selectedMarkerPosition => _selectedMarkerPosition;
+
+  void setSelectedMarker(Map<String, dynamic> data, LatLng position) {
+    _selectedMarkerData = data;
+    _selectedMarkerPosition = position;
+    notifyListeners();
+  }
+
+  void clearSelectedMarker() {
+    _selectedMarkerData = null;
+    _selectedMarkerPosition = null;
+    notifyListeners();
+  }
+
+  // สำหรับเก็บตำแหน่งของ markers บนหน้าจอ
+  // เพื่อใช้ในการจัดการตำแหน่งของ markers บน Google Map
+  Map<String, Offset> _markerScreenPositions = {};
+  Map<String, Offset> get markerScreenPositions => _markerScreenPositions;
+
+  void updateMarkerScreenPosition(String markerId, Offset position) {
+    _markerScreenPositions[markerId] = position;
+    notifyListeners();
+  }
+
+  void clearMarkerScreenPositions() {
+    _markerScreenPositions.clear();
     notifyListeners();
   }
 }
