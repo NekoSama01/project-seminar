@@ -85,7 +85,11 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.anchor, size: 80, color: Colors.blue[800]),
+                  Image.asset(
+                    'images/icons/logo_app.png',
+                    width: 90,
+                    height: 90,
+                  ),
                   SizedBox(height: 20),
                   Text(
                     'Fishing Guide',

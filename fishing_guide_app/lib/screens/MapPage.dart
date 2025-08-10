@@ -1,9 +1,9 @@
 import 'dart:math' as math;
-
 import 'package:fishing_guide_app/provider/map_provider.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class MapPage extends StatefulWidget {
   @override
@@ -165,7 +165,9 @@ class _MapPageState extends State<MapPage> {
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start, // <<< ตรงนี้คือจุดสำคัญ
+                            crossAxisAlignment:
+                                CrossAxisAlignment
+                                    .start, // <<< ตรงนี้คือจุดสำคัญ
                             children: [
                               Row(
                                 children: [
@@ -200,12 +202,32 @@ class _MapPageState extends State<MapPage> {
                                   provider.selectedMarkerData!['Contact'],
                                   textAlign: TextAlign.left, // <<< ชิดซ้าย
                                 ),
-                              if (provider.selectedMarkerData!['fishs'] !=
+                              if (provider.selectedMarkerData!['facebook'] !=
                                   null)
+                                Text(
+                                  provider.selectedMarkerData!['facebook'],
+                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                ),
+                              if (provider.selectedMarkerData!['instragram'] !=
+                                  null)
+                                Text(
+                                  provider.selectedMarkerData!['instragram'],
+                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                ),
+                              if (provider.selectedMarkerData!['tiktok'] !=
+                                  null)
+                                Text(
+                                  provider.selectedMarkerData!['tiktok'],
+                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                ),
+                              if (provider.selectedMarkerData!['fishs'] != null)
                                 Text(
                                   provider.selectedMarkerData!['fishs'],
                                   textAlign: TextAlign.left, // <<< ชิดซ้าย
                                 ),
+                              Text(
+                                "อยากทราบข้อมูลเพิ่มเติมกดปุ่มแผนที่ด้านล่าง",
+                              ),
 
                               SizedBox(height: 8),
                               // เพิ่มปุ่มอื่นได้
@@ -213,10 +235,24 @@ class _MapPageState extends State<MapPage> {
                                 icon: Icon(Icons.directions),
                                 label: Text('นำทาง'),
                                 onPressed: () {
-                                  // ไปยังตำแหน่ง marker
                                   final pos = provider.selectedMarkerPosition!;
-                                  _mapController?.animateCamera(
-                                    CameraUpdate.newLatLng(pos),
+                                  final url = Uri.parse(
+                                    "https://www.google.com/maps/dir/?api=1&destination=${pos.latitude},${pos.longitude}",
+                                  );
+                                  launchUrl(url, mode: LaunchMode.externalApplication);
+                                },
+                              ),
+                              ElevatedButton.icon(
+                                icon: Icon(Icons.map),
+                                label: Text('แผนที่'),
+                                onPressed: () {
+                                  final pos = provider.selectedMarkerPosition!;
+                                  final url = Uri.parse(
+                                    "https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}",
+                                  );
+                                  launchUrl(
+                                    url,
+                                    mode: LaunchMode.externalApplication,
                                   );
                                 },
                               ),

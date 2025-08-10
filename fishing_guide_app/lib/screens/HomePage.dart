@@ -1,4 +1,9 @@
+import 'package:fishing_guide_app/screens/social_screens/upload_post_page.dart';
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:timeago/timeago.dart' as timeago;
+
 
 class HomePage extends StatefulWidget {
   @override
@@ -9,96 +14,120 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue[50]!, Colors.blue[100]!],
-          ),
-        ),
-        child: Center(
-          child: Container(
-            width: MediaQuery.of(context).size.width * 0.9,
-            height: MediaQuery.of(context).size.height * 0.5,
-            margin: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 15,
-                  offset: Offset(0, 6),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // โลโก้แอป
-                Container(
-                  width: 100,
-                  height: 100,
-                  decoration: BoxDecoration(
-                    color: Colors.blue[50],
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.anchor,
-                    size: 60,
-                    color: Colors.blue[800],
-                  ),
-                ),
-                SizedBox(height: 30),
-                
-                // หัวข้อ
-                Text(
-                  'ยินดีต้อนรับสู่ Fishing Guide',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue[800],
-                  ),
-                ),
-                SizedBox(height: 15),
-                
-                // คำอธิบาย
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 30),
-                  child: Text(
-                    'แอปพลิเคชันคู่มือการตกปลาที่ครบวงจร\nรวมข้อมูลคันเบ็ด เหยื่อตกปลา และสถานที่ตกปลาดีๆ',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey[700],
-                      height: 1.5,
+      backgroundColor: Colors.blue[50],
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('posts')
+            .orderBy('createdAt', descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return Center(child: Text('ยังไม่มีโพสต์'));
+          }
+
+          final posts = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: EdgeInsets.all(10),
+            itemCount: posts.length,
+            itemBuilder: (context, index) {
+              final post = posts[index].data() as Map<String, dynamic>;
+
+              return Container(
+                margin: EdgeInsets.only(bottom: 15),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6,
+                      offset: Offset(0, 3),
                     ),
-                  ),
+                  ],
                 ),
-                SizedBox(height: 30),
-                
-                // ปุ่มเริ่มต้นใช้งาน
-                ElevatedButton(
-                  onPressed: () {
-                    // นำทางไปยังหน้าอื่น
-                  },
-                  child: Text(
-                    'เริ่มต้นใช้งาน',
-                    style: TextStyle(fontSize: 16),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue[600],
-                    padding: EdgeInsets.symmetric(horizontal: 30, vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue[200],
+                        child: Icon(Icons.person, color: Colors.white),
+                      ),
+                      title: Text(
+                        post['userId'] ?? 'Unknown User',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      subtitle: post['createdAt'] != null
+                          ? Text(
+                              timeago.format(
+                                (post['createdAt'] as Timestamp).toDate(),
+                              ),
+                              style: TextStyle(fontSize: 12),
+                            )
+                          : Text(''),
                     ),
-                  ),
+                    if (post['imageUrl'] != null)
+                      CachedNetworkImage(
+                        imageUrl: post['imageUrl'],
+                        placeholder: (context, url) =>
+                            Center(child: CircularProgressIndicator()),
+                        errorWidget: (context, url, error) =>
+                            Icon(Icons.error),
+                        width: double.infinity,
+                        height: 250,
+                        fit: BoxFit.cover,
+                      ),
+                    if (post['text'] != null && post['text'].toString().isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Text(
+                          post['text'],
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                      child: Row(
+                        children: [
+                          IconButton(
+                            icon: Icon(Icons.thumb_up_alt_outlined),
+                            onPressed: () {
+                              // TODO: ทำระบบไลก์
+                            },
+                          ),
+                          Text('${post['likesCount'] ?? 0}'),
+                          SizedBox(width: 10),
+                          IconButton(
+                            icon: Icon(Icons.comment_outlined),
+                            onPressed: () {
+                              // TODO: ทำระบบคอมเมนต์
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-          ),
-        ),
+              );
+            },
+          );
+        },
+      ),
+      // ปุ่มไปหน้าอัปโหลดโพสต์
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.blue[600],
+        child: Icon(Icons.add_a_photo, color: Colors.white),
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => UploadPostPage()),
+          );
+        },
       ),
     );
   }
