@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart'; // <--- เพิ่ม
 import 'package:fishing_guide_app/main.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -10,11 +11,29 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
+
+  final _usernameController = TextEditingController(); // <--- เพิ่ม
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+
   bool _isLoading = false;
   String _errorMessage = '';
+
+  String _getErrorMessage(String code) {
+    switch (code) {
+      case 'email-already-in-use':
+        return 'อีเมลนี้ถูกใช้งานแล้ว';
+      case 'invalid-email':
+        return 'อีเมลไม่ถูกต้อง';
+      case 'operation-not-allowed':
+        return 'ระบบไม่รองรับการสมัครสมาชิกด้วยอีเมล';
+      case 'weak-password':
+        return 'รหัสผ่านไม่แข็งแรงพอ';
+      default:
+        return 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
+    }
+  }
 
   Future<void> _registerWithEmailAndPassword() async {
     if (!_formKey.currentState!.validate()) return;
@@ -32,14 +51,40 @@ class _RegisterPageState extends State<RegisterPage> {
     });
 
     try {
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
+      // 1. สมัครสมาชิก
+      UserCredential userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(
+            email: _emailController.text.trim(),
+            password: _passwordController.text.trim(),
+          );
+
+      String uid = userCredential.user!.uid;
+
+      // 2. บันทึก username ลง Firestore
+      await FirebaseFirestore.instance.collection('users').doc(uid).set({
+        'username': _usernameController.text.trim(),
+        'email': _emailController.text.trim(),
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // 3. แสดง SnackBar แจ้งเตือน
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'สมัครสมาชิกสำเร็จ กรุณาเข้าสู่ระบบ',
+            style: TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 3),
+        ),
       );
-      
-      // หลังจากสมัครสมาชิกสำเร็จ ไปที่หน้าหลัก
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => HomeScreen()),
+
+      // 4. รอ 1 วินาทีแล้วไปหน้า Login
+      await Future.delayed(Duration(seconds: 1));
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (context) => LoginPage()),
+        (route) => false,
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -52,23 +97,9 @@ class _RegisterPageState extends State<RegisterPage> {
     }
   }
 
-  String _getErrorMessage(String code) {
-    switch (code) {
-      case 'email-already-in-use':
-        return 'อีเมลนี้ถูกใช้งานแล้ว';
-      case 'invalid-email':
-        return 'อีเมลไม่ถูกต้อง';
-      case 'operation-not-allowed':
-        return 'ระบบไม่รองรับการสมัครสมาชิกด้วยอีเมล';
-      case 'weak-password':
-        return 'รหัสผ่านไม่แข็งแรงพอ';
-      default:
-        return 'เกิดข้อผิดพลาดในการสมัครสมาชิก';
-    }
-  }
-
   @override
   void dispose() {
+    _usernameController.dispose(); // <--- เพิ่ม
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
@@ -87,7 +118,10 @@ class _RegisterPageState extends State<RegisterPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue[100]!, const Color.fromARGB(255, 255, 255, 255)!],
+            colors: [
+              Colors.blue[100]!,
+              const Color.fromARGB(255, 255, 255, 255)!,
+            ],
           ),
         ),
         child: Center(
@@ -106,6 +140,27 @@ class _RegisterPageState extends State<RegisterPage> {
                         style: TextStyle(color: Colors.red),
                       ),
                     ),
+
+                  // ช่องกรอก Username
+                  TextFormField(
+                    controller: _usernameController,
+                    decoration: InputDecoration(
+                      labelText: 'ชื่อผู้ใช้ (Username)',
+                      prefixIcon: Icon(Icons.person),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'กรุณากรอกชื่อผู้ใช้';
+                      }
+                      return null;
+                    },
+                  ),
+                  SizedBox(height: 20),
+
+                  // อีเมล
                   TextFormField(
                     controller: _emailController,
                     decoration: InputDecoration(
@@ -124,6 +179,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   SizedBox(height: 20),
+
+                  // รหัสผ่าน
                   TextFormField(
                     controller: _passwordController,
                     decoration: InputDecoration(
@@ -145,6 +202,8 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   SizedBox(height: 20),
+
+                  // ยืนยันรหัสผ่าน
                   TextFormField(
                     controller: _confirmPasswordController,
                     decoration: InputDecoration(
@@ -163,28 +222,36 @@ class _RegisterPageState extends State<RegisterPage> {
                     },
                   ),
                   SizedBox(height: 30),
+
                   SizedBox(
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _registerWithEmailAndPassword,
+                      onPressed:
+                          _isLoading ? null : _registerWithEmailAndPassword,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue[800],
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: _isLoading
-                          ? CircularProgressIndicator(color: Colors.white)
-                          : Text('สมัครสมาชิก', style: TextStyle(fontSize: 18)),
+                      child:
+                          _isLoading
+                              ? CircularProgressIndicator(color: Colors.white)
+                              : Text(
+                                'สมัครสมาชิก',
+                                style: TextStyle(fontSize: 18),
+                              ),
                     ),
                   ),
                   SizedBox(height: 20),
+
                   TextButton(
                     onPressed: () {
-                      Navigator.pushReplacement(
+                      Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(builder: (context) => LoginPage()),
+                        (route) => false,
                       );
                     },
                     child: Text(

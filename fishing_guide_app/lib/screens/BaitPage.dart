@@ -57,7 +57,7 @@ class _BaitPageState extends State<BaitPage> {
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.blue[800],
+              color: const Color.fromARGB(255, 46, 144, 255),
               borderRadius: BorderRadius.only(
                 topLeft: Radius.circular(15),
                 topRight: Radius.circular(15),

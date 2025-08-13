@@ -172,7 +172,7 @@ class _HomeScreenState extends State<HomeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text('Fishing Guide', style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.blue[800],
+        backgroundColor: const Color.fromARGB(255, 46, 144, 255),
         actions: [
           IconButton(
             icon: Icon(Icons.logout, color: Colors.white),

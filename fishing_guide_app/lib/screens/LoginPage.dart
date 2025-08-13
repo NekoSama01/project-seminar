@@ -28,10 +28,12 @@ class _LoginPageState extends State<LoginPage> {
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      
+
       // ล็อกอินสำเร็จ ไปที่หน้าหลัก
-      Navigator.of(context).pushReplacement(
+      Navigator.pushAndRemoveUntil(
+        context,
         MaterialPageRoute(builder: (context) => HomeScreen()),
+        (route) => false,
       );
     } on FirebaseAuthException catch (e) {
       setState(() {
@@ -74,7 +76,10 @@ class _LoginPageState extends State<LoginPage> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue[100]!, const Color.fromARGB(255, 255, 255, 255)!],
+            colors: [
+              Colors.blue[100]!,
+              const Color.fromARGB(255, 255, 255, 255)!,
+            ],
           ),
         ),
         child: Center(
@@ -151,25 +156,33 @@ class _LoginPageState extends State<LoginPage> {
                     width: double.infinity,
                     height: 50,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _signInWithEmailAndPassword,
+                      onPressed:
+                          _isLoading ? null : _signInWithEmailAndPassword,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.blue[800],
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
                       ),
-                      child: _isLoading
-                          ? CircularProgressIndicator(color: const Color.fromARGB(255, 255, 0, 0))
-                          : Text('เข้าสู่ระบบ', style: TextStyle(fontSize: 18)),
+                      child:
+                          _isLoading
+                              ? CircularProgressIndicator(
+                                color: const Color.fromARGB(255, 255, 0, 0),
+                              )
+                              : Text(
+                                'เข้าสู่ระบบ',
+                                style: TextStyle(fontSize: 18),
+                              ),
                     ),
                   ),
                   SizedBox(height: 20),
                   TextButton(
                     onPressed: () {
                       // ไปที่หน้าสมัครสมาชิก
-                      Navigator.push(
+                      Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(builder: (context) => RegisterPage()),
+                        (route) => false,
                       );
                     },
                     child: Text(

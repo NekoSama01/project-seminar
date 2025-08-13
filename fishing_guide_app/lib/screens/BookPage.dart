@@ -33,7 +33,7 @@ class BookPage extends StatelessWidget {
               Icon(
                 Icons.menu_book,
                 size: 60,
-                color: Colors.blue[800],
+                color: const Color.fromARGB(255, 46, 144, 255),
               ),
               SizedBox(height: 20),
               Text(
