@@ -239,19 +239,40 @@ class _MapPageState extends State<MapPage> {
                                   final url = Uri.parse(
                                     "https://www.google.com/maps/dir/?api=1&destination=${pos.latitude},${pos.longitude}",
                                   );
-                                  launchUrl(url, mode: LaunchMode.externalApplication);
-                                },
-                              ),
-                              ElevatedButton.icon(
-                                icon: Icon(Icons.map),
-                                label: Text('แผนที่'),
-                                onPressed: () {
-                                  final pos = provider.selectedMarkerPosition!;
-                                  final url = Uri.parse(
-                                    "https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}",
-                                  );
                                   launchUrl(
                                     url,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                },
+                              ),
+                              // 🔹 ปุ่มแผนที่
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.map),
+                                label: const Text('แผนที่'),
+                                onPressed: () async {
+                                  final provider = context.read<MapProvider>();
+                                  final pos = provider.selectedMarkerPosition!;
+                                  final data = provider.selectedMarkerData!;
+                                  final docId = data['docId'];
+
+                                  String? placeId = data['place_id'];
+
+                                  if (placeId == null || placeId.isEmpty) {
+                                    placeId = await provider
+                                        .getPlaceIdAndUpdateFirestore(
+                                          docId,
+                                          pos.latitude,
+                                          pos.longitude,
+                                        );
+                                  }
+
+                                  final url =
+                                      (placeId != null && placeId.isNotEmpty)
+                                          ? "https://www.google.com/maps/search/?api=1&query_place_id=$placeId"
+                                          : "https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}";
+
+                                  launchUrl(
+                                    Uri.parse(url),
                                     mode: LaunchMode.externalApplication,
                                   );
                                 },

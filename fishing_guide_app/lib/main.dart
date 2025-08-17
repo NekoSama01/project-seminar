@@ -23,7 +23,7 @@ void main() async {
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
-  await dotenv.load(fileName: ".env"); // โหลด environment variables
+  await dotenv.load(); // โหลด environment variables
 
   runApp(MultiProvider(
       providers: [

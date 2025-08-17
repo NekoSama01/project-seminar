@@ -1,6 +1,9 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class MapProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -21,7 +24,7 @@ class MapProvider with ChangeNotifier {
     try {
       _isLoading = true;
       _errorMessage = null;
-      await Future.microtask(() => notifyListeners()); // <-- ใช้ microtask
+      await Future.microtask(() => notifyListeners());
 
       final querySnapshot = await _firestore.collection('locations').get();
       final Set<Marker> newMarkers = {};
@@ -36,12 +39,15 @@ class MapProvider with ChangeNotifier {
         final marker = Marker(
           markerId: MarkerId(doc.id),
           position: position,
-          infoWindow: InfoWindow.noText, // ไม่ใช้ infoWindow เดิม
+          infoWindow: InfoWindow.noText,
           icon: BitmapDescriptor.defaultMarkerWithHue(
             BitmapDescriptor.hueAzure,
           ),
           onTap: () {
-            setSelectedMarker(data, position);
+            setSelectedMarker({
+              ...data, // copy ข้อมูลเดิม
+              'docId': doc.id, // เพิ่ม docId
+            }, position);
           },
         );
         newMarkers.add(marker);
@@ -79,7 +85,7 @@ class MapProvider with ChangeNotifier {
       debugPrint(_errorMessage);
     } finally {
       _isLoading = false;
-      await Future.microtask(() => notifyListeners()); // <-- ใช้ microtask
+      await Future.microtask(() => notifyListeners());
     }
   }
 
@@ -88,9 +94,8 @@ class MapProvider with ChangeNotifier {
     _currentLocation = location;
     notifyListeners();
   }
-  
-  // สำหรับจัดการ marker ที่ถูกเลือก
-  // เพื่อให้สามารถแสดงข้อมูลเพิ่มเติมหรือทำการกระทำอื่นๆ ได้
+
+  // ข้อมูล Marker ที่ถูกเลือก
   Map<String, dynamic>? _selectedMarkerData;
   LatLng? _selectedMarkerPosition;
 
@@ -110,7 +115,6 @@ class MapProvider with ChangeNotifier {
   }
 
   // สำหรับเก็บตำแหน่งของ markers บนหน้าจอ
-  // เพื่อใช้ในการจัดการตำแหน่งของ markers บน Google Map
   Map<String, Offset> _markerScreenPositions = {};
   Map<String, Offset> get markerScreenPositions => _markerScreenPositions;
 
@@ -122,5 +126,80 @@ class MapProvider with ChangeNotifier {
   void clearMarkerScreenPositions() {
     _markerScreenPositions.clear();
     notifyListeners();
+  }
+
+  // 🔹 ฟังก์ชัน getPlaceId
+  Future<String?> getPlaceId(double lat, double lng) async {
+    final String apiKey = dotenv.env['GOOGLE_API_KEY'] ?? '';
+    if (apiKey.isEmpty) return null;
+
+    final url =
+        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey';
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'OK' && data['results'].isNotEmpty) {
+          return data['results'][0]['place_id'];
+        } else {
+          debugPrint(
+            'Google API error: ${data['status']} ${data['error_message'] ?? ''}',
+          );
+        }
+      } else {
+        debugPrint('HTTP error: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Exception in getPlaceId: $e');
+    }
+    return null;
+  }
+
+  // 🔹 ฟังก์ชัน getPlaceId และ update Firestore
+  Future<String?> getPlaceIdAndUpdateFirestore(
+    String docId,
+    double lat,
+    double lng,
+  ) async {
+    final String apiKey = dotenv.env['GOOGLE_API_KEY'] ?? '';
+    if (apiKey.isEmpty) return null;
+
+    final url =
+        'https://maps.googleapis.com/maps/api/geocode/json?latlng=$lat,$lng&key=$apiKey';
+
+    try {
+      final response = await http.get(Uri.parse(url));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['status'] == 'OK' && data['results'].isNotEmpty) {
+          final placeId = data['results'][0]['place_id'];
+
+          // อัปเดตลง Firestore
+          await _firestore.collection('locations').doc(docId).update({
+            'place_id': placeId,
+          });
+
+          // อัปเดต selectedMarkerData ถ้าเป็น marker ปัจจุบัน
+          if (_selectedMarkerData != null &&
+              _selectedMarkerPosition != null &&
+              _selectedMarkerData!['docId'] == docId) {
+            _selectedMarkerData!['place_id'] = placeId;
+            notifyListeners();
+          }
+
+          return placeId;
+        } else {
+          debugPrint(
+            'Google API error: ${data['status']} ${data['error_message'] ?? ''}',
+          );
+        }
+      } else {
+        debugPrint('HTTP error: ${response.statusCode}');
+      }
+    } catch (e) {
+      debugPrint('Exception in getPlaceIdAndUpdateFirestore: $e');
+    }
+
+    return null;
   }
 }
