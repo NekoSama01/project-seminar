@@ -13,6 +13,7 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> {
   GoogleMapController? _mapController;
   CameraPosition? _initialPosition;
+  final List<String> searchKeywords = ["ฤดูร้อน", "ฤดูฝน", "ฤดูหนาว"];
 
   @override
   void initState() {
@@ -230,21 +231,6 @@ class _MapPageState extends State<MapPage> {
                               ),
 
                               SizedBox(height: 8),
-                              // เพิ่มปุ่มอื่นได้
-                              ElevatedButton.icon(
-                                icon: Icon(Icons.directions),
-                                label: Text('นำทาง'),
-                                onPressed: () {
-                                  final pos = provider.selectedMarkerPosition!;
-                                  final url = Uri.parse(
-                                    "https://www.google.com/maps/dir/?api=1&destination=${pos.latitude},${pos.longitude}",
-                                  );
-                                  launchUrl(
-                                    url,
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                },
-                              ),
                               // 🔹 ปุ่มแผนที่
                               ElevatedButton.icon(
                                 icon: const Icon(Icons.map),
@@ -252,29 +238,20 @@ class _MapPageState extends State<MapPage> {
                                 onPressed: () async {
                                   final provider = context.read<MapProvider>();
                                   final pos = provider.selectedMarkerPosition!;
-                                  final data = provider.selectedMarkerData!;
-                                  final docId = data['docId'];
 
-                                  String? placeId = data['place_id'];
-
-                                  if (placeId == null || placeId.isEmpty) {
-                                    placeId = await provider
-                                        .getPlaceIdAndUpdateFirestore(
-                                          docId,
-                                          pos.latitude,
-                                          pos.longitude,
-                                        );
-                                  }
-
-                                  final url =
-                                      (placeId != null && placeId.isNotEmpty)
-                                          ? "https://www.google.com/maps/search/?api=1&query_place_id=$placeId"
-                                          : "https://www.google.com/maps/search/?api=1&query=${pos.latitude},${pos.longitude}";
-
-                                  launchUrl(
-                                    Uri.parse(url),
-                                    mode: LaunchMode.externalApplication,
+                                  // ใช้ q=lat,long เพื่อเปิดแค่ตำแหน่ง ไม่โชว์ popup ข้อมูล
+                                  final Uri googleMapsUrl = Uri.parse(
+                                    "https://www.google.com/maps?q=${pos.latitude},${pos.longitude}&z=16",
                                   );
+
+                                  if (await canLaunchUrl(googleMapsUrl)) {
+                                    await launchUrl(
+                                      googleMapsUrl,
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                  } else {
+                                    throw "Could not open Google Maps.";
+                                  }
                                 },
                               ),
                             ],
@@ -282,6 +259,66 @@ class _MapPageState extends State<MapPage> {
                         ),
                       ),
                     ),
+                  // 🔍 Search Bar
+                  Positioned(
+                    top: 40,
+                    left: 20,
+                    right: 20,
+                    child: Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(12),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: "ค้นหาสถานที่...",
+                          prefixIcon: Icon(Icons.search),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                  // 🔹 ตัวแปรเก็บคำค้นหา
+                  // 📋 View Card สำหรับคำค้นหา
+                  Positioned(
+                    top: 100, // อยู่ใต้ search bar
+                    left: 20,
+                    right: 20,
+                    child: Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: Row(
+                            children:
+                                searchKeywords.map((keyword) {
+                                  return Padding(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 4.0,
+                                    ),
+                                    child: GestureDetector(
+                                      onTap: () {
+                                        // ทำการค้นหาตาม keyword
+                                        print("ค้นหา: $keyword");
+                                      },
+                                      child: Chip(
+                                        label: Text(keyword),
+                                        backgroundColor: Colors.blue[100],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             );
