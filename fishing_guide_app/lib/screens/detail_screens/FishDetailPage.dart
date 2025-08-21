@@ -15,12 +15,7 @@ class FishDetailPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(fishData['nameTH']?.toString() ?? 'รายละเอียดปลา',
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-        backgroundColor: Colors.blue[800],
-      ),
+      backgroundColor: Colors.grey[50],
       body: Consumer<FishProvider>(
         builder: (context, fishProvider, _) {
           final seasons = _convertToStringList(fishData['seasons']);
@@ -29,32 +24,73 @@ class FishDetailPage extends StatelessWidget {
           final habitat = fishData['habitat']?.toString() ?? 'ไม่ระบุ';
           final difficulty = fishData['difficulty']?.toString();
           
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _FishImageSection(
-                  documentId: documentId,
-                  fishProvider: fishProvider,
-                ),
-                const SizedBox(height: 24),
-                _BasicInfoSection(fishData: fishData),
-                _MeasurementsSection(
-                  averageLength: averageLength,
-                  averageWeight: averageWeight,
-                ),
-                _HabitatSection(habitat: habitat),
-                if (seasons.isNotEmpty) 
-                  _SeasonsSection(seasons: seasons),
-                if (difficulty != null)
-                  _DifficultySection(difficulty: difficulty),
-                if (fishData['description']?.toString().isNotEmpty ?? false)
-                  _DescriptionSection(
-                    description: fishData['description']!.toString(),
+          return CustomScrollView(
+            slivers: [
+              // Custom App Bar with Image
+              SliverAppBar(
+                expandedHeight: 300,
+                pinned: true,
+                backgroundColor: Colors.blue[800],
+                flexibleSpace: FlexibleSpaceBar(
+                  title: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(15),
+                    ),
+                    child: Text(
+                      fishData['nameTH']?.toString() ?? 'รายละเอียดปลา',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
                   ),
-              ],
-            ),
+                  background: _FishImageSection(
+                    documentId: documentId,
+                    fishProvider: fishProvider,
+                    isAppBarImage: true,
+                  ),
+                ),
+              ),
+              
+              // Content
+              SliverPadding(
+                padding: const EdgeInsets.all(16),
+                sliver: SliverList(
+                  delegate: SliverChildListDelegate([
+                    // Fish Name Card
+                    _FishNameCard(fishData: fishData),
+                    const SizedBox(height: 16),
+                    
+                    // Quick Stats
+                    _QuickStatsCard(
+                      averageLength: averageLength,
+                      averageWeight: averageWeight,
+                      difficulty: difficulty,
+                    ),
+                    const SizedBox(height: 16),
+                    
+                    // Habitat Card
+                    _HabitatCard(habitat: habitat),
+                    const SizedBox(height: 16),
+                    
+                    // Seasons Card
+                    if (seasons.isNotEmpty) 
+                      _SeasonsCard(seasons: seasons),
+                    if (seasons.isNotEmpty) 
+                      const SizedBox(height: 16),
+                    
+                    // Description Card
+                    if (fishData['description']?.toString().isNotEmpty ?? false)
+                      _DescriptionCard(
+                        description: fishData['description']!.toString(),
+                      ),
+                  ]),
+                ),
+              ),
+            ],
           );
         },
       ),
@@ -68,251 +104,561 @@ class FishDetailPage extends StatelessWidget {
   }
 }
 
-// ส่วน Widget ย่อยต่างๆ
 class _FishImageSection extends StatelessWidget {
   final String documentId;
   final FishProvider fishProvider;
+  final bool isAppBarImage;
 
   const _FishImageSection({
     required this.documentId,
     required this.fishProvider,
+    this.isAppBarImage = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: FutureBuilder<ImageProvider?>(
-        future: fishProvider.getFishImage(documentId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return _buildImagePlaceholder(
-              child: const CircularProgressIndicator(),
-            );
-          }
-          if (snapshot.hasError) {
-            return _buildImagePlaceholder(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Icon(Icons.error, color: Colors.red, size: 40),
-                  Text('โหลดรูปภาพไม่สำเร็จ'),
-                ],
+    return FutureBuilder<ImageProvider?>(
+      future: fishProvider.getFishImage(documentId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return _buildImagePlaceholder(
+            child: const CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            ),
+          );
+        }
+        if (snapshot.hasError) {
+          return _buildImagePlaceholder(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: const [
+                Icon(Icons.error, color: Colors.white70, size: 40),
+                SizedBox(height: 8),
+                Text(
+                  'โหลดรูปภาพไม่สำเร็จ',
+                  style: TextStyle(color: Colors.white70),
+                ),
+              ],
+            ),
+          );
+        }
+        if (snapshot.hasData && snapshot.data != null) {
+          return Container(
+            decoration: BoxDecoration(
+              image: DecorationImage(
+                image: snapshot.data!,
+                fit: BoxFit.cover,
               ),
-            );
-          }
-          if (snapshot.hasData && snapshot.data != null) {
-            return Container(
-              width: 200,
-              height: 200,
+            ),
+            child: Container(
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                image: DecorationImage(
-                  image: snapshot.data!,
-                  fit: BoxFit.cover,
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.3),
+                  ],
                 ),
               ),
-            );
-          }
-          return _buildImagePlaceholder(
-            child: const Text('ไม่มีรูปภาพ'),
+            ),
           );
-        },
-      ),
+        }
+        return _buildImagePlaceholder(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: const [
+              Icon(Icons.image_not_supported, 
+                   color: Colors.white70, size: 60),
+              SizedBox(height: 8),
+              Text(
+                'ไม่มีรูปภาพ',
+                style: TextStyle(color: Colors.white70, fontSize: 16),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 
   Widget _buildImagePlaceholder({required Widget child}) {
     return Container(
-      width: 200,
-      height: 200,
       decoration: BoxDecoration(
-        color: Colors.grey[200],
-        borderRadius: BorderRadius.circular(10),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Colors.blue[400]!,
+            Colors.blue[800]!,
+          ],
+        ),
       ),
       child: Center(child: child),
     );
   }
 }
 
-class _BasicInfoSection extends StatelessWidget {
+class _FishNameCard extends StatelessWidget {
   final Map<String, dynamic> fishData;
 
-  const _BasicInfoSection({
-    required this.fishData,
-  });
+  const _FishNameCard({required this.fishData});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader('ข้อมูลพื้นฐาน'),
-        _DetailItem(label: 'ชื่อไทย', value: fishData['nameTH']?.toString() ?? 'ไม่ระบุ'),
-        _DetailItem(label: 'ชื่ออังกฤษ', value: fishData['nameEN']?.toString() ?? 'ไม่ระบุ'),
-        _DetailItem(label: 'ชื่อวิทยาศาสตร์', value: fishData['nameSC']?.toString() ?? 'ไม่ระบุ'),
-      ],
-    );
-  }
-}
-
-class _MeasurementsSection extends StatelessWidget {
-  final String averageLength;
-  final String averageWeight;
-
-  const _MeasurementsSection({
-    required this.averageLength,
-    required this.averageWeight,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader('ขนาดโดยเฉลี่ย'),
-        _MeasurementRow(
-          icon: Icons.straighten,
-          value: '$averageLength cm',
-          color: Colors.blue[800]!,
-        ),
-        _MeasurementRow(
-          icon: Icons.monitor_weight,
-          value: '$averageWeight kg',
-          color: Colors.green[800]!,
-        ),
-      ],
-    );
-  }
-}
-
-class _HabitatSection extends StatelessWidget {
-  final String habitat;
-
-  const _HabitatSection({
-    required this.habitat,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader('ถิ่นอาศัย'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(
-            habitat,
-            style: const TextStyle(fontSize: 16),
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.blue[50]!,
+              Colors.white,
+            ],
           ),
         ),
-      ],
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.blue[800], size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'ข้อมูลพื้นฐาน',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue[800],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _DetailItem(
+              icon: Icons.translate,
+              label: 'ชื่อไทย',
+              value: fishData['nameTH']?.toString() ?? 'ไม่ระบุ',
+              color: Colors.green[700]!,
+            ),
+            _DetailItem(
+              icon: Icons.language,
+              label: 'ชื่ออังกฤษ',
+              value: fishData['nameEN']?.toString() ?? 'ไม่ระบุ',
+              color: Colors.blue[700]!,
+            ),
+            _DetailItem(
+              icon: Icons.science,
+              label: 'ชื่อวิทยาศาสตร์',
+              value: fishData['nameSC']?.toString() ?? 'ไม่ระบุ',
+              color: Colors.purple[700]!,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _SeasonsSection extends StatelessWidget {
-  final List<String> seasons;
+class _QuickStatsCard extends StatelessWidget {
+  final String averageLength;
+  final String averageWeight;
+  final String? difficulty;
 
-  const _SeasonsSection({
-    required this.seasons,
+  const _QuickStatsCard({
+    required this.averageLength,
+    required this.averageWeight,
+    this.difficulty,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader('ฤดูกาล'),
-        _ChipList(items: seasons),
-      ],
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.orange[50]!,
+              Colors.white,
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.analytics_outlined, color: Colors.orange[800], size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'สถิติด่วน',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange[800],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _StatBox(
+                    icon: Icons.straighten,
+                    title: 'ความยาว',
+                    value: '$averageLength cm',
+                    color: Colors.blue[600]!,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _StatBox(
+                    icon: Icons.monitor_weight,
+                    title: 'น้ำหนัก',
+                    value: '$averageWeight kg',
+                    color: Colors.green[600]!,
+                  ),
+                ),
+              ],
+            ),
+            if (difficulty != null) ...[
+              const SizedBox(height: 12),
+              _DifficultyChip(difficulty: difficulty!),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _DifficultySection extends StatelessWidget {
+class _StatBox extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String value;
+  final Color color;
+
+  const _StatBox({
+    required this.icon,
+    required this.title,
+    required this.value,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DifficultyChip extends StatelessWidget {
   final String difficulty;
 
-  const _DifficultySection({
-    required this.difficulty,
-  });
+  const _DifficultyChip({required this.difficulty});
 
   @override
   Widget build(BuildContext context) {
     Color chipColor;
+    Color textColor;
+    IconData icon;
+    
     switch (difficulty.toLowerCase()) {
       case 'ง่าย':
         chipColor = Colors.green[100]!;
+        textColor = Colors.green[800]!;
+        icon = Icons.sentiment_very_satisfied;
         break;
       case 'ปานกลาง':
         chipColor = Colors.orange[100]!;
+        textColor = Colors.orange[800]!;
+        icon = Icons.sentiment_neutral;
         break;
       case 'ยาก':
         chipColor = Colors.red[100]!;
+        textColor = Colors.red[800]!;
+        icon = Icons.sentiment_very_dissatisfied;
         break;
       default:
         chipColor = Colors.grey[100]!;
+        textColor = Colors.grey[800]!;
+        icon = Icons.help_outline;
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader('ระดับความยาก'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Chip(
-            label: Text(
-              difficulty,
-              style: const TextStyle(fontSize: 14),
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: chipColor,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: textColor.withOpacity(0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: textColor, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            'ระดับความยาก: $difficulty',
+            style: TextStyle(
+              color: textColor,
+              fontWeight: FontWeight.bold,
             ),
-            backgroundColor: chipColor,
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }
 
-class _DescriptionSection extends StatelessWidget {
+class _HabitatCard extends StatelessWidget {
+  final String habitat;
+
+  const _HabitatCard({required this.habitat});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.teal[50]!,
+              Colors.white,
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.nature_people, color: Colors.teal[700], size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'ถิ่นอาศัย',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.teal[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.teal[200]!),
+              ),
+              child: Text(
+                habitat,
+                style: const TextStyle(
+                  fontSize: 16,
+                  height: 1.5,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SeasonsCard extends StatelessWidget {
+  final List<String> seasons;
+
+  const _SeasonsCard({required this.seasons});
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.amber[50]!,
+              Colors.white,
+            ],
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.calendar_today, color: Colors.amber[800], size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'ฤดูกาลที่เหมาะสม',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.amber[800],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: seasons.map((season) => _SeasonChip(season: season)).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _SeasonChip extends StatelessWidget {
+  final String season;
+
+  const _SeasonChip({required this.season});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.amber[100]!, Colors.amber[200]!],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.amber[300]!.withOpacity(0.3),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Text(
+        season,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Colors.amber[800],
+        ),
+      ),
+    );
+  }
+}
+
+class _DescriptionCard extends StatelessWidget {
   final String description;
 
-  const _DescriptionSection({
-    required this.description,
-  });
+  const _DescriptionCard({required this.description});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const _SectionHeader('คำอธิบาย'),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8),
-          child: Text(
-            description,
-            style: const TextStyle(fontSize: 16),
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Colors.indigo[50]!,
+              Colors.white,
+            ],
           ),
         ),
-      ],
-    );
-  }
-}
-
-// Widget ที่ใช้ร่วมกัน
-class _SectionHeader extends StatelessWidget {
-  final String title;
-
-  const _SectionHeader(this.title);
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 16, bottom: 8),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: Colors.blue[800],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.description, color: Colors.indigo[700], size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'คำอธิบาย',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo[700],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.indigo[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.indigo[200]!),
+              ),
+              child: Text(
+                description,
+                style: const TextStyle(
+                  fontSize: 16,
+                  height: 1.6,
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -320,48 +666,14 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _DetailItem extends StatelessWidget {
-  final String label;
-  final String value;
-
-  const _DetailItem({
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            flex: 2,
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.grey,
-              ),
-            ),
-          ),
-          Expanded(
-            flex: 3,
-            child: Text(value),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _MeasurementRow extends StatelessWidget {
   final IconData icon;
+  final String label;
   final String value;
   final Color color;
 
-  const _MeasurementRow({
+  const _DetailItem({
     required this.icon,
+    required this.label,
     required this.value,
     required this.color,
   });
@@ -369,42 +681,32 @@ class _MeasurementRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 20, color: color),
-          const SizedBox(width: 8),
-          Text(
-            value,
-            style: const TextStyle(fontSize: 16),
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            flex: 2,
+            child: Text(
+              label,
+              style: TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+          Expanded(
+            flex: 3,
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ChipList extends StatelessWidget {
-  final List<String> items;
-
-  const _ChipList({
-    required this.items,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8),
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: items.map((item) => Chip(
-          label: Text(item),
-          backgroundColor: Colors.blue[50],
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
-        )).toList(),
       ),
     );
   }

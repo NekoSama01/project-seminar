@@ -8,17 +8,23 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 class MapProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  Set<Marker> _markers = {};
+  Set<Marker> _allMarkers = {}; // เก็บ marker ทั้งหมด
+  Set<Marker> _filteredMarkers = {}; // เก็บ marker ที่กรองแล้ว
+  List<Map<String, dynamic>> _allLocations = []; // เก็บข้อมูลทั้งหมด
+  String? _currentFilter; // keyword ที่เลือกอยู่
+  
   LatLngBounds? _markersBounds;
   bool _isLoading = false;
   String? _errorMessage;
   LatLng? _currentLocation;
 
-  Set<Marker> get markers => _markers;
+  // Getters
+  Set<Marker> get markers => _currentFilter == null ? _allMarkers : _filteredMarkers;
   LatLngBounds? get markersBounds => _markersBounds;
   bool get isLoading => _isLoading;
   String? get error => _errorMessage;
   LatLng? get currentLocation => _currentLocation;
+  String? get currentFilter => _currentFilter;
 
   Future<void> fetchLocations() async {
     try {
@@ -28,6 +34,7 @@ class MapProvider with ChangeNotifier {
 
       final querySnapshot = await _firestore.collection('locations').get();
       final Set<Marker> newMarkers = {};
+      final List<Map<String, dynamic>> locations = [];
       LatLngBounds? bounds;
 
       for (final doc in querySnapshot.docs) {
@@ -35,6 +42,14 @@ class MapProvider with ChangeNotifier {
         final lat = data['Latitude'] as double;
         final lng = data['Longitude'] as double;
         final position = LatLng(lat, lng);
+
+        // เก็บข้อมูลสำหรับการค้นหา
+        final locationData = {
+          ...data,
+          'docId': doc.id,
+          'position': position,
+        };
+        locations.add(locationData);
 
         final marker = Marker(
           markerId: MarkerId(doc.id),
@@ -45,32 +60,29 @@ class MapProvider with ChangeNotifier {
           ),
           onTap: () {
             setSelectedMarker({
-              ...data, // copy ข้อมูลเดิม
-              'docId': doc.id, // เพิ่ม docId
+              ...data,
+              'docId': doc.id,
             }, position);
           },
         );
         newMarkers.add(marker);
 
+        // คำนวณ bounds
         if (bounds == null) {
           bounds = LatLngBounds(northeast: position, southwest: position);
         } else {
-          final neLat =
-              bounds.northeast.latitude > position.latitude
-                  ? bounds.northeast.latitude
-                  : position.latitude;
-          final neLng =
-              bounds.northeast.longitude > position.longitude
-                  ? bounds.northeast.longitude
-                  : position.longitude;
-          final swLat =
-              bounds.southwest.latitude < position.latitude
-                  ? bounds.southwest.latitude
-                  : position.latitude;
-          final swLng =
-              bounds.southwest.longitude < position.longitude
-                  ? bounds.southwest.longitude
-                  : position.longitude;
+          final neLat = bounds.northeast.latitude > position.latitude
+              ? bounds.northeast.latitude
+              : position.latitude;
+          final neLng = bounds.northeast.longitude > position.longitude
+              ? bounds.northeast.longitude
+              : position.longitude;
+          final swLat = bounds.southwest.latitude < position.latitude
+              ? bounds.southwest.latitude
+              : position.latitude;
+          final swLng = bounds.southwest.longitude < position.longitude
+              ? bounds.southwest.longitude
+              : position.longitude;
           bounds = LatLngBounds(
             northeast: LatLng(neLat, neLng),
             southwest: LatLng(swLat, swLng),
@@ -78,8 +90,15 @@ class MapProvider with ChangeNotifier {
         }
       }
 
-      _markers = newMarkers;
+      _allMarkers = newMarkers;
+      _allLocations = locations;
       _markersBounds = bounds;
+      
+      // ถ้ามี filter อยู่ ให้กรองใหม่
+      if (_currentFilter != null) {
+        _filterMarkersByKeyword(_currentFilter!);
+      }
+      
     } catch (e) {
       _errorMessage = 'Failed to load locations: $e';
       debugPrint(_errorMessage);
@@ -87,6 +106,101 @@ class MapProvider with ChangeNotifier {
       _isLoading = false;
       await Future.microtask(() => notifyListeners());
     }
+  }
+
+  // ฟังก์ชันสำหรับกรอง markers ตาม keyword
+  void filterMarkers(String? keyword) {
+    if (keyword == null || keyword.isEmpty) {
+      // แสดงทั้งหมด
+      _currentFilter = null;
+      _filteredMarkers = {};
+      _calculateFilteredBounds(_allMarkers);
+    } else {
+      _currentFilter = keyword;
+      _filterMarkersByKeyword(keyword);
+    }
+    notifyListeners();
+  }
+
+  void _filterMarkersByKeyword(String keyword) {
+    final Set<Marker> filtered = {};
+    
+    for (final location in _allLocations) {
+      bool matchFound = false;
+      
+      // ค้นหาใน fields ต่างๆ
+      final searchFields = [
+        location['name']?.toString() ?? '',
+        location['address']?.toString() ?? '',
+        location['fishs']?.toString() ?? '',
+        location['season']?.toString() ?? '', // ถ้ามี field season
+      ];
+      
+      for (final field in searchFields) {
+        if (field.toLowerCase().contains(keyword.toLowerCase())) {
+          matchFound = true;
+          break;
+        }
+      }
+      
+      if (matchFound) {
+        // สร้าง marker สำหรับข้อมูลที่ตรงกัน
+        final position = location['position'] as LatLng;
+        final marker = Marker(
+          markerId: MarkerId(location['docId']),
+          position: position,
+          infoWindow: InfoWindow.noText,
+          icon: BitmapDescriptor.defaultMarkerWithHue(
+            BitmapDescriptor.hueOrange, // เปลี่ยนสีเพื่อแสดงว่ากรองแล้ว
+          ),
+          onTap: () {
+            setSelectedMarker({
+              ...location,
+            }, position);
+          },
+        );
+        filtered.add(marker);
+      }
+    }
+    
+    _filteredMarkers = filtered;
+    _calculateFilteredBounds(filtered);
+  }
+
+  // คำนวณ bounds สำหรับ markers ที่กรองแล้ว
+  void _calculateFilteredBounds(Set<Marker> markers) {
+    if (markers.isEmpty) return;
+    
+    LatLngBounds? bounds;
+    for (final marker in markers) {
+      final position = marker.position;
+      if (bounds == null) {
+        bounds = LatLngBounds(northeast: position, southwest: position);
+      } else {
+        final neLat = bounds.northeast.latitude > position.latitude
+            ? bounds.northeast.latitude
+            : position.latitude;
+        final neLng = bounds.northeast.longitude > position.longitude
+            ? bounds.northeast.longitude
+            : position.longitude;
+        final swLat = bounds.southwest.latitude < position.latitude
+            ? bounds.southwest.latitude
+            : position.latitude;
+        final swLng = bounds.southwest.longitude < position.longitude
+            ? bounds.southwest.longitude
+            : position.longitude;
+        bounds = LatLngBounds(
+          northeast: LatLng(neLat, neLng),
+          southwest: LatLng(swLat, swLng),
+        );
+      }
+    }
+    _markersBounds = bounds;
+  }
+
+  // ล้างการกรอง
+  void clearFilter() {
+    filterMarkers(null);
   }
 
   // ตั้งค่าตำแหน่งปัจจุบัน
@@ -128,7 +242,7 @@ class MapProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  // 🔹 ฟังก์ชัน getPlaceId
+  // ฟังก์ชัน getPlaceId
   Future<String?> getPlaceId(double lat, double lng) async {
     final String apiKey = dotenv.env['GOOGLE_API_KEY'] ?? '';
     if (apiKey.isEmpty) return null;
@@ -155,7 +269,7 @@ class MapProvider with ChangeNotifier {
     return null;
   }
 
-  // 🔹 ฟังก์ชัน getPlaceId และ update Firestore
+  // ฟังก์ชัน getPlaceId และ update Firestore
   Future<String?> getPlaceIdAndUpdateFirestore(
     String docId,
     double lat,

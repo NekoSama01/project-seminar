@@ -14,6 +14,7 @@ class _MapPageState extends State<MapPage> {
   GoogleMapController? _mapController;
   CameraPosition? _initialPosition;
   final List<String> searchKeywords = ["ฤดูร้อน", "ฤดูฝน", "ฤดูหนาว"];
+  String? selectedKeyword; // เก็บ keyword ที่เลือก
 
   @override
   void initState() {
@@ -24,7 +25,6 @@ class _MapPageState extends State<MapPage> {
   Future<void> _initializeMap() async {
     final mapProvider = Provider.of<MapProvider>(context, listen: false);
 
-    // ใช้ addPostFrameCallback เพื่อให้ทำงานหลัง build เสร็จ
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await mapProvider.fetchLocations();
 
@@ -55,7 +55,7 @@ class _MapPageState extends State<MapPage> {
   }
 
   double _calculateZoomLevel(LatLngBounds bounds) {
-    const double padding = 100; // padding in pixels
+    const double padding = 100;
     final double width = MediaQuery.of(context).size.width;
     final double height = MediaQuery.of(context).size.height;
 
@@ -85,16 +85,34 @@ class _MapPageState extends State<MapPage> {
     });
   }
 
+  // ฟังก์ชันสำหรับกรอง markers
+  void _filterMarkers(String? keyword) {
+    final mapProvider = Provider.of<MapProvider>(context, listen: false);
+    
+    setState(() {
+      selectedKeyword = keyword;
+    });
+    
+    mapProvider.filterMarkers(keyword);
+    
+    // อัปเดตแผนที่ให้แสดง bounds ใหม่
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mapProvider.markersBounds != null && mounted) {
+        await _mapController?.animateCamera(
+          CameraUpdate.newLatLngBounds(mapProvider.markersBounds!, 100),
+        );
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // ตรวจสอบ _initialPosition ก่อน build
     if (_initialPosition == null) {
       return const Center(child: CircularProgressIndicator());
     }
 
     return Consumer<MapProvider>(
       builder: (context, provider, child) {
-        // ใช้ FutureBuilder เพื่อจัดการสถานะการโหลด
         return FutureBuilder(
           future: provider.isLoading ? null : Future.value(),
           builder: (context, snapshot) {
@@ -126,7 +144,6 @@ class _MapPageState extends State<MapPage> {
                       backgroundColor: Colors.white,
                       child: Icon(Icons.gps_fixed, color: Colors.blue[600]),
                       onPressed: () async {
-                        // เรียกตำแหน่งปัจจุบัน
                         if (provider.currentLocation != null) {
                           await _mapController?.animateCamera(
                             CameraUpdate.newLatLng(provider.currentLocation!),
@@ -150,7 +167,8 @@ class _MapPageState extends State<MapPage> {
                       elevation: 2,
                     ),
                   ),
-                  // Overlay ข้อมูล Marker แบบ Custom
+
+                  // Overlay ข้อมูล Marker
                   if (provider.selectedMarkerData != null &&
                       provider.selectedMarkerPosition != null)
                     Positioned(
@@ -166,9 +184,7 @@ class _MapPageState extends State<MapPage> {
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start, // <<< ตรงนี้คือจุดสำคัญ
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
@@ -180,7 +196,7 @@ class _MapPageState extends State<MapPage> {
                                         fontSize: 18,
                                         fontWeight: FontWeight.bold,
                                       ),
-                                      textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                      textAlign: TextAlign.left,
                                     ),
                                   ),
                                   IconButton(
@@ -191,55 +207,43 @@ class _MapPageState extends State<MapPage> {
                                   ),
                                 ],
                               ),
-                              if (provider.selectedMarkerData!['address'] !=
-                                  null)
+                              if (provider.selectedMarkerData!['address'] != null)
                                 Text(
                                   provider.selectedMarkerData!['address'],
-                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                  textAlign: TextAlign.left,
                                 ),
-                              if (provider.selectedMarkerData!['Contact'] !=
-                                  null)
+                              if (provider.selectedMarkerData!['Contact'] != null)
                                 Text(
                                   provider.selectedMarkerData!['Contact'],
-                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                  textAlign: TextAlign.left,
                                 ),
-                              if (provider.selectedMarkerData!['facebook'] !=
-                                  null)
+                              if (provider.selectedMarkerData!['facebook'] != null)
                                 Text(
                                   provider.selectedMarkerData!['facebook'],
-                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                  textAlign: TextAlign.left,
                                 ),
-                              if (provider.selectedMarkerData!['instragram'] !=
-                                  null)
+                              if (provider.selectedMarkerData!['instragram'] != null)
                                 Text(
                                   provider.selectedMarkerData!['instragram'],
-                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                  textAlign: TextAlign.left,
                                 ),
-                              if (provider.selectedMarkerData!['tiktok'] !=
-                                  null)
+                              if (provider.selectedMarkerData!['tiktok'] != null)
                                 Text(
                                   provider.selectedMarkerData!['tiktok'],
-                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                  textAlign: TextAlign.left,
                                 ),
                               if (provider.selectedMarkerData!['fishs'] != null)
                                 Text(
                                   provider.selectedMarkerData!['fishs'],
-                                  textAlign: TextAlign.left, // <<< ชิดซ้าย
+                                  textAlign: TextAlign.left,
                                 ),
-                              Text(
-                                "อยากทราบข้อมูลเพิ่มเติมกดปุ่มแผนที่ด้านล่าง",
-                              ),
-
+                              Text("อยากทราบข้อมูลเพิ่มเติมกดปุ่มแผนที่ด้านล่าง"),
                               SizedBox(height: 8),
-                              // 🔹 ปุ่มแผนที่
                               ElevatedButton.icon(
                                 icon: const Icon(Icons.map),
                                 label: const Text('แผนที่'),
                                 onPressed: () async {
-                                  final provider = context.read<MapProvider>();
                                   final pos = provider.selectedMarkerPosition!;
-
-                                  // ใช้ q=lat,long เพื่อเปิดแค่ตำแหน่ง ไม่โชว์ popup ข้อมูล
                                   final Uri googleMapsUrl = Uri.parse(
                                     "https://www.google.com/maps?q=${pos.latitude},${pos.longitude}&z=16",
                                   );
@@ -259,7 +263,8 @@ class _MapPageState extends State<MapPage> {
                         ),
                       ),
                     ),
-                  // 🔍 Search Bar
+
+                  // Search Bar
                   Positioned(
                     top: 40,
                     left: 20,
@@ -277,13 +282,20 @@ class _MapPageState extends State<MapPage> {
                             vertical: 14,
                           ),
                         ),
+                        onSubmitted: (value) {
+                          if (value.isNotEmpty) {
+                            _filterMarkers(value);
+                          } else {
+                            _filterMarkers(null);
+                          }
+                        },
                       ),
                     ),
                   ),
-                  // 🔹 ตัวแปรเก็บคำค้นหา
-                  // 📋 View Card สำหรับคำค้นหา
+
+                  // Keyword Filter Chips
                   Positioned(
-                    top: 100, // อยู่ใต้ search bar
+                    top: 100,
                     left: 20,
                     right: 20,
                     child: Card(
@@ -293,28 +305,71 @@ class _MapPageState extends State<MapPage> {
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(12.0),
-                        child: SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          child: Row(
-                            children:
-                                searchKeywords.map((keyword) {
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 4.0,
-                                    ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ปุ่ม "ทั้งหมด" สำหรับแสดง markers ทั้งหมด
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  // Chip สำหรับแสดงทั้งหมด
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
                                     child: GestureDetector(
-                                      onTap: () {
-                                        // ทำการค้นหาตาม keyword
-                                        print("ค้นหา: $keyword");
-                                      },
+                                      onTap: () => _filterMarkers(null),
                                       child: Chip(
-                                        label: Text(keyword),
-                                        backgroundColor: Colors.blue[100],
+                                        label: Text('ทั้งหมด'),
+                                        backgroundColor: selectedKeyword == null
+                                            ? Colors.blue[300]
+                                            : Colors.grey[200],
+                                        labelStyle: TextStyle(
+                                          color: selectedKeyword == null
+                                              ? Colors.white
+                                              : Colors.black,
+                                          fontWeight: selectedKeyword == null
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
                                       ),
                                     ),
-                                  );
-                                }).toList(),
-                          ),
+                                  ),
+                                  // Chips สำหรับ keywords
+                                  ...searchKeywords.map((keyword) {
+                                    final isSelected = selectedKeyword == keyword;
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                      child: GestureDetector(
+                                        onTap: () => _filterMarkers(keyword),
+                                        child: Chip(
+                                          label: Text(keyword),
+                                          backgroundColor: isSelected
+                                              ? Colors.blue[300]
+                                              : Colors.blue[100],
+                                          labelStyle: TextStyle(
+                                            color: isSelected ? Colors.white : Colors.black,
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ],
+                              ),
+                            ),
+                            // แสดงจำนวน markers ที่แสดงอยู่
+                            SizedBox(height: 8),
+                            Text(
+                              'แสดง ${provider.markers.length} สถานที่' +
+                                  (selectedKeyword != null ? ' (กรองด้วย: $selectedKeyword)' : ''),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
