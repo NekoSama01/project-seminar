@@ -3,7 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fishing_guide_app/provider/bait_provider.dart';
 import 'package:fishing_guide_app/provider/fish_provider.dart';
 import 'package:fishing_guide_app/provider/rod_provider.dart';
-import 'package:fishing_guide_app/provider/map_provider.dart'; // เพิ่ม import นี้
+import 'package:fishing_guide_app/provider/map_provider.dart';
+import 'package:fishing_guide_app/provider/steps_provider.dart'; // เพิ่ม import StepsProvider
 import 'package:fishing_guide_app/screens/LoginPage.dart';
 import 'package:flutter/material.dart';
 import 'package:fishing_guide_app/screens/BookPage.dart';
@@ -15,25 +16,26 @@ import 'package:fishing_guide_app/screens/RodPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart'; // เพิ่ม import นี้
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await dotenv.load(); // โหลด environment variables
 
-  runApp(MultiProvider(
+  runApp(
+    MultiProvider(
       providers: [
         ChangeNotifierProvider(create: (_) => FishProvider()),
         ChangeNotifierProvider(create: (_) => BaitProvider()),
         ChangeNotifierProvider(create: (_) => RodProvider()),
-        ChangeNotifierProvider(create: (_) => MapProvider()), // เพิ่ม MapProvider เข้ามา
+        ChangeNotifierProvider(create: (_) => MapProvider()),
+        ChangeNotifierProvider(create: (_) => StepsProvider()), // เพิ่ม StepsProvider
       ],
       child: MyApp(),
-  ));
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -44,6 +46,7 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        fontFamily: 'Kanit', // เพิ่ม fontFamily ที่ต้องการ
         scaffoldBackgroundColor: Colors.white,
       ),
       home: AuthWrapper(),
@@ -51,7 +54,8 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {  // เปลี่ยนเป็น StatelessWidget
+class AuthWrapper extends StatelessWidget {
+  // เปลี่ยนเป็น StatelessWidget
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<User?>(
@@ -60,14 +64,13 @@ class AuthWrapper extends StatelessWidget {  // เปลี่ยนเป็�
         if (snapshot.connectionState == ConnectionState.active) {
           final user = snapshot.data;
           if (user == null) {
-            return LoginPage();  // LoginPage ควรมี Scaffold ของตัวเอง
+            return LoginPage(); // LoginPage ควรมี Scaffold ของตัวเอง
           }
-          return HomeScreen();  // HomeScreen มี Scaffold ของตัวเอง
+          return HomeScreen(); // HomeScreen มี Scaffold ของตัวเอง
         }
-        return Scaffold(  // หน้าขณะโหลดก็ต้องมี Scaffold
-          body: Center( 
-            child: CircularProgressIndicator(),
-          ),
+        return Scaffold(
+          // หน้าขณะโหลดก็ต้องมี Scaffold
+          body: Center(child: CircularProgressIndicator()),
         );
       },
     );
@@ -101,23 +104,28 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _initializeData() async {
     try {
       if (!mounted) return;
-      
+
       final fishProvider = Provider.of<FishProvider>(context, listen: false);
       final rodProvider = Provider.of<RodProvider>(context, listen: false);
       final baitProvider = Provider.of<BaitProvider>(context, listen: false);
+      final stepsProvider = Provider.of<StepsProvider>(context, listen: false); // เพิ่ม StepsProvider
 
       // Load data sequentially to avoid overwhelming the app
       await fishProvider.fetchFishes();
       if (!mounted) return;
       await fishProvider.precacheAllImages(context);
-      
+
       await baitProvider.fetchBaits();
       if (!mounted) return;
       await baitProvider.precacheAllImages(context);
-      
+
       await rodProvider.fetchRods();
       if (!mounted) return;
       await rodProvider.precacheAllImages(context);
+
+      // โหลดข้อมูล Steps สำหรับ BookPage
+      await stepsProvider.refreshSteps();
+      if (!mounted) return;
 
       if (mounted) {
         setState(() {
@@ -126,9 +134,9 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to load data: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to load data: $e')));
         setState(() {
           _isLoading = false;
         });
@@ -145,27 +153,53 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _signOut() async {
-  try {
-    await FirebaseAuth.instance.signOut();
-    // นำทางไปยังหน้า Login และลบ stack หน้าปัจจุบันทั้งหมด
-    Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (context) => LoginPage()),
-      (Route<dynamic> route) => false,
-    );
-  } catch (e) {
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('เกิดข้อผิดพลาดในการออกจากระบบ: $e')),
+    try {
+      await FirebaseAuth.instance.signOut();
+      // นำทางไปยังหน้า Login และลบ stack หน้าปัจจุบันทั้งหมด
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (context) => LoginPage()),
+        (Route<dynamic> route) => false,
       );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('เกิดข้อผิดพลาดในการออกจากระบบ: $e')),
+        );
+      }
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topCenter,
+              end: Alignment.bottomCenter,
+              colors: [Colors.blue[50]!, Colors.blue[100]!],
+            ),
+          ),
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+                ),
+                SizedBox(height: 20),
+                Text(
+                  'กำลังโหลดข้อมูล...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.blue[700],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -174,6 +208,25 @@ class _HomeScreenState extends State<HomeScreen> {
         title: Text('Fishing Guide', style: TextStyle(color: Colors.white)),
         backgroundColor: const Color.fromARGB(255, 46, 144, 255),
         actions: [
+          // แสดงสถานะการโหลดข้อมูล Steps
+          Consumer<StepsProvider>(
+            builder: (context, stepsProvider, child) {
+              if (stepsProvider.isLoading) {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                );
+              }
+              return SizedBox.shrink();
+            },
+          ),
           IconButton(
             icon: Icon(Icons.logout, color: Colors.white),
             onPressed: _signOut,
@@ -240,8 +293,80 @@ class _HomeScreenState extends State<HomeScreen> {
               label: 'แผนที่',
             ),
             BottomNavigationBarItem(
-              icon: Icon(Icons.menu_book_outlined),
-              activeIcon: Icon(Icons.menu_book),
+              icon: Stack(
+                children: [
+                  Icon(Icons.menu_book_outlined),
+                  // แสดง badge เมื่อมีข้อมูลใน Steps
+                  Consumer<StepsProvider>(
+                    builder: (context, stepsProvider, child) {
+                      if (stepsProvider.hasData) {
+                        return Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '${stepsProvider.totalSteps}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        );
+                      }
+                      return SizedBox.shrink();
+                    },
+                  ),
+                ],
+              ),
+              activeIcon: Stack(
+                children: [
+                  Icon(Icons.menu_book),
+                  // แสดง badge เมื่อมีข้อมูลใน Steps (สำหรับ active)
+                  Consumer<StepsProvider>(
+                    builder: (context, stepsProvider, child) {
+                      if (stepsProvider.hasData) {
+                        return Positioned(
+                          right: 0,
+                          top: 0,
+                          child: Container(
+                            padding: EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            constraints: BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
+                            child: Text(
+                              '${stepsProvider.totalSteps}',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        );
+                      }
+                      return SizedBox.shrink();
+                    },
+                  ),
+                ],
+              ),
               label: 'คู่มือ',
             ),
           ],
