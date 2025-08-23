@@ -94,179 +94,193 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final rodProvider = Provider.of<RodProvider>(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
 
-    return Container(
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF6a11cb), Color(0xFF2575fc), Color(0xFF667eea)],
-          stops: [0.0, 0.6, 1.0],
+    return Scaffold(
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF6a11cb), Color(0xFF2575fc), Color(0xFF667eea)],
+            stops: [0.0, 0.6, 1.0],
+          ),
         ),
-      ),
-      child: Center(
-        child: Container(
-          margin: EdgeInsets.symmetric(
-            horizontal: MediaQuery.of(context).size.width * 0.05,
-          ),
-          height: MediaQuery.of(context).size.height * 0.85,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(25),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black38,
-                blurRadius: 20,
-                offset: Offset(0, 10),
-                spreadRadius: 2,
+        child: SafeArea(
+          child: Center(
+            child: Container(
+              margin: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.05,
+                vertical: screenHeight * 0.02,
               ),
-            ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(25),
-            child: Column(
-              children: [
-                // Animated Header
-                AnimatedBuilder(
-                  animation: _headerAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _headerAnimation.value,
-                      child: Container(
-                        padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF6a11cb), Color(0xFF2575fc)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFF6a11cb).withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: Offset(0, 5),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    Icons.anchor,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
+              constraints: BoxConstraints(
+                maxHeight: screenHeight * 0.9,
+                minHeight: screenHeight * 0.6,
+              ),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    blurRadius: 20,
+                    offset: Offset(0, 10),
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(25),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Animated Header - ใช้ Flexible แทน Expanded
+                    Flexible(
+                      flex: 0,
+                      child: AnimatedBuilder(
+                        animation: _headerAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _headerAnimation.value,
+                            child: Container(
+                              padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
+                              decoration: BoxDecoration(
+                                gradient: LinearGradient(
+                                  colors: [Color(0xFF6a11cb), Color(0xFF2575fc)],
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
                                 ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Color(0xFF6a11cb).withOpacity(0.3),
+                                    blurRadius: 15,
+                                    offset: Offset(0, 5),
+                                  ),
+                                ],
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Row(
                                     children: [
-                                      Text(
-                                        'คันเบ็ดแต่ละประเภท',
-                                        style: TextStyle(
+                                      Container(
+                                        padding: EdgeInsets.all(8),
+                                        decoration: BoxDecoration(
+                                          color: Colors.white.withOpacity(0.2),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Icon(
+                                          Icons.anchor,
                                           color: Colors.white,
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.5,
+                                          size: 24,
                                         ),
                                       ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        rodProvider.rodList?.length != null
-                                            ? 'ทั้งหมด ${rodProvider.rodList!.length} รายการ'
-                                            : 'กำลังโหลดข้อมูล...',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.9),
-                                          fontSize: 14,
+                                      SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              'คันเบ็ดแต่ละประเภท',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.w700,
+                                                letterSpacing: 0.5,
+                                              ),
+                                            ),
+                                            SizedBox(height: 4),
+                                            Text(
+                                              rodProvider.rodList?.length != null
+                                                  ? 'ทั้งหมด ${rodProvider.rodList!.length} รายการ'
+                                                  : 'กำลังโหลดข้อมูล...',
+                                              style: TextStyle(
+                                                color: Colors.white.withOpacity(0.9),
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ],
                                   ),
-                                ),
-                              ],
-                            ),
-                            SizedBox(height: 16),
-                            // Search Bar
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(15),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
+                                  SizedBox(height: 16),
+                                  // Search Bar
+                                  Container(
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(15),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 8,
+                                          offset: Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: TextField(
+                                      controller: _searchController,
+                                      onChanged: (value) {
+                                        setState(() {
+                                          _searchQuery = value;
+                                        });
+                                      },
+                                      decoration: InputDecoration(
+                                        hintText: 'ค้นหาคันเบ็ด...',
+                                        hintStyle: TextStyle(color: Colors.grey[500]),
+                                        prefixIcon: Icon(
+                                          Icons.search,
+                                          color: Color(0xFF6a11cb),
+                                        ),
+                                        suffixIcon: _searchQuery.isNotEmpty
+                                            ? IconButton(
+                                                icon: Icon(
+                                                  Icons.clear,
+                                                  color: Colors.grey[500],
+                                                ),
+                                                onPressed: () {
+                                                  _searchController.clear();
+                                                  setState(() {
+                                                    _searchQuery = '';
+                                                  });
+                                                },
+                                              )
+                                            : null,
+                                        border: OutlineInputBorder(
+                                          borderRadius: BorderRadius.circular(15),
+                                          borderSide: BorderSide.none,
+                                        ),
+                                        filled: true,
+                                        fillColor: Colors.white,
+                                        contentPadding: EdgeInsets.symmetric(
+                                          horizontal: 16,
+                                          vertical: 12,
+                                        ),
+                                      ),
+                                    ),
                                   ),
                                 ],
                               ),
-                              child: TextField(
-                                controller: _searchController,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _searchQuery = value;
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'ค้นหาคันเบ็ด...',
-                                  hintStyle: TextStyle(color: Colors.grey[500]),
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: Color(0xFF6a11cb),
-                                  ),
-                                  suffixIcon:
-                                      _searchQuery.isNotEmpty
-                                          ? IconButton(
-                                            icon: Icon(
-                                              Icons.clear,
-                                              color: Colors.grey[500],
-                                            ),
-                                            onPressed: () {
-                                              _searchController.clear();
-                                              setState(() {
-                                                _searchQuery = '';
-                                              });
-                                            },
-                                          )
-                                          : null,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                ),
-                              ),
                             ),
-                          ],
-                        ),
+                          );
+                        },
                       ),
-                    );
-                  },
-                ),
+                    ),
 
-                // Rod list content
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () => _refreshData(context),
-                    color: Color(0xFF6a11cb),
-                    backgroundColor: Colors.white,
-                    child: _buildRodList(context, rodProvider),
-                  ),
+                    // Rod list content - ใช้ Flexible แทน Expanded
+                    Flexible(
+                      flex: 1,
+                      child: RefreshIndicator(
+                        onRefresh: () => _refreshData(context),
+                        color: Color(0xFF6a11cb),
+                        backgroundColor: Colors.white,
+                        child: _buildRodList(context, rodProvider),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
+              ),
             ),
           ),
         ),
@@ -293,6 +307,8 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
       child: ListView.builder(
         padding: EdgeInsets.fromLTRB(16, 8, 16, 20),
         itemCount: filteredRod.length,
+        physics: AlwaysScrollableScrollPhysics(),
+        shrinkWrap: true,
         itemBuilder: (context, index) {
           final rod = filteredRod[index].data() as Map<String, dynamic>;
           final documentId = filteredRod[index].id;
@@ -321,6 +337,8 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
     return ListView.builder(
       padding: EdgeInsets.all(16),
       itemCount: 6,
+      shrinkWrap: true,
+      physics: AlwaysScrollableScrollPhysics(),
       itemBuilder: (context, index) {
         return Shimmer.fromColors(
           baseColor: Colors.grey[300]!,
@@ -380,95 +398,114 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
   }
 
   Widget _buildErrorState(BuildContext context, String error) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.red[50],
-              shape: BoxShape.circle,
-            ),
-            child: Icon(Icons.error_outline, color: Colors.red[400], size: 60),
-          ),
-          SizedBox(height: 20),
-          Text(
-            'เกิดข้อผิดพลาด',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[800],
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'ไม่สามารถโหลดข้อมูลคันเบ็ดได้',
-            style: TextStyle(color: Colors.grey[600], fontSize: 16),
-            textAlign: TextAlign.center,
-          ),
-          SizedBox(height: 24),
-          ElevatedButton.icon(
-            onPressed: () => _refreshData(context),
-            icon: Icon(Icons.refresh),
-            label: Text('ลองใหม่'),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Color(0xFF6a11cb),
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+    return SingleChildScrollView(
+      physics: AlwaysScrollableScrollPhysics(),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.5,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.red[50],
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.error_outline, color: Colors.red[400], size: 60),
               ),
-              elevation: 4,
-            ),
+              SizedBox(height: 20),
+              Text(
+                'เกิดข้อผิดพลาด',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[800],
+                ),
+              ),
+              SizedBox(height: 8),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  'ไม่สามารถโหลดข้อมูลคันเบ็ดได้',
+                  style: TextStyle(color: Colors.grey[600], fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              SizedBox(height: 24),
+              ElevatedButton.icon(
+                onPressed: () => _refreshData(context),
+                icon: Icon(Icons.refresh),
+                label: Text('ลองใหม่'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF6a11cb),
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 4,
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 
   Widget _buildEmptyState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            padding: EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.grey[100],
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              _searchQuery.isNotEmpty ? Icons.search_off : Icons.inbox_outlined,
-              color: Colors.grey[400],
-              size: 60,
-            ),
+    return SingleChildScrollView(
+      physics: AlwaysScrollableScrollPhysics(),
+      child: Container(
+        height: MediaQuery.of(context).size.height * 0.5,
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.grey[100],
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  _searchQuery.isNotEmpty ? Icons.search_off : Icons.inbox_outlined,
+                  color: Colors.grey[400],
+                  size: 60,
+                ),
+              ),
+              SizedBox(height: 20),
+              Text(
+                _searchQuery.isNotEmpty ? 'ไม่พบผลการค้นหา' : 'ไม่พบข้อมูลคันเบ็ด',
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.grey[700],
+                ),
+              ),
+              SizedBox(height: 8),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  _searchQuery.isNotEmpty
+                      ? 'ลองค้นหาด้วยคำอื่น'
+                      : 'กดรีเฟรชเพื่อโหลดข้อมูลใหม่',
+                  style: TextStyle(color: Colors.grey[500], fontSize: 14),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              SizedBox(height: 20),
+              if (_searchQuery.isEmpty)
+                TextButton.icon(
+                  onPressed: () => _refreshData(context),
+                  icon: Icon(Icons.refresh),
+                  label: Text('รีเฟรชข้อมูล'),
+                  style: TextButton.styleFrom(foregroundColor: Color(0xFF6a11cb)),
+                ),
+            ],
           ),
-          SizedBox(height: 20),
-          Text(
-            _searchQuery.isNotEmpty ? 'ไม่พบผลการค้นหา' : 'ไม่พบข้อมูลคันเบ็ด',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[700],
-            ),
-          ),
-          SizedBox(height: 8),
-          Text(
-            _searchQuery.isNotEmpty
-                ? 'ลองค้นหาด้วยคำอื่น'
-                : 'กดรีเฟรชเพื่อโหลดข้อมูลใหม่',
-            style: TextStyle(color: Colors.grey[500], fontSize: 14),
-          ),
-          SizedBox(height: 20),
-          if (_searchQuery.isEmpty)
-            TextButton.icon(
-              onPressed: () => _refreshData(context),
-              icon: Icon(Icons.refresh),
-              label: Text('รีเฟรชข้อมูล'),
-              style: TextButton.styleFrom(foregroundColor: Color(0xFF6a11cb)),
-            ),
-        ],
+        ),
       ),
     );
   }
@@ -504,9 +541,8 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
             Navigator.push(
               context,
               PageRouteBuilder(
-                pageBuilder:
-                    (_, __, ___) =>
-                        RodDetailPage(rodData: rod, documentId: documentId),
+                pageBuilder: (_, __, ___) =>
+                    RodDetailPage(rodData: rod, documentId: documentId),
                 transitionsBuilder: (_, animation, __, child) {
                   return SlideTransition(
                     position: Tween<Offset>(
@@ -536,8 +572,11 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
               padding: EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Main card content with flexible layout
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Enhanced Avatar with Hero Animation
                       Hero(
@@ -571,8 +610,7 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
                                 );
                               }
 
-                              if (snapshot.connectionState ==
-                                      ConnectionState.done &&
+                              if (snapshot.connectionState == ConnectionState.done &&
                                   snapshot.hasData &&
                                   snapshot.data != null) {
                                 return CircleAvatar(
@@ -597,31 +635,39 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
                         ),
                       ),
                       SizedBox(width: 16),
+                      // Main content area
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
                           children: [
+                            // Title section
                             Text(
                               rod['nameTH'] ?? 'ไม่มีชื่อ',
                               style: TextStyle(
-                                fontSize: 20,
+                                fontSize: 18,
                                 fontWeight: FontWeight.bold,
                                 color: Color(0xFF6a11cb),
                                 letterSpacing: 0.3,
                               ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             SizedBox(height: 4),
                             Text(
                               rod['nameEN'] ?? 'No Name',
                               style: TextStyle(
-                                fontSize: 15,
+                                fontSize: 14,
                                 color: Colors.grey[600],
                                 fontStyle: FontStyle.italic,
                               ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             SizedBox(height: 12),
+                            // Chips section
                             Wrap(
-                              spacing: 8,
+                              spacing: 6,
                               runSpacing: 6,
                               children: [
                                 _buildEnhancedChip(
@@ -664,11 +710,13 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
                           ],
                         ),
                       ),
+                      // Price section
                       if (hasPrice)
                         Container(
+                          constraints: BoxConstraints(maxWidth: 100),
                           padding: EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
+                            horizontal: 8,
+                            vertical: 6,
                           ),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -688,16 +736,19 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
                             children: [
                               Icon(
                                 Icons.payments,
-                                size: 18,
+                                size: 14,
                                 color: Colors.amber[800],
                               ),
                               SizedBox(width: 4),
-                              Text(
-                                '${rod['price']} ฿',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.amber[800],
+                              Flexible(
+                                child: Text(
+                                  '${rod['price']} ฿',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.amber[800],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -706,80 +757,83 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
                     ],
                   ),
 
-                  if (rod['description'] != null &&
-                      rod['description'].toString().isNotEmpty) ...[
-                    SizedBox(height: 16),
-                    Container(
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[200]!),
-                      ),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(
-                            Icons.description,
-                            size: 16,
-                            color: Colors.grey[600],
-                          ),
-                          SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              rod['description'],
-                              style: TextStyle(
-                                color: Colors.grey[700],
-                                fontSize: 14,
-                                height: 1.4,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
+                    // Description section
+                    if (rod['description'] != null &&
+                        rod['description'].toString().isNotEmpty) ...[
+                      SizedBox(height: 16),
+                      Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey[50],
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey[200]!),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.description,
+                              size: 16,
+                              color: Colors.grey[600],
                             ),
-                          ),
-                        ],
+                            SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                rod['description'],
+                                style: TextStyle(
+                                  color: Colors.grey[700],
+                                  fontSize: 13,
+                                  height: 1.4,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
 
-                  SizedBox(height: 16),
-                  // Rod Specifications
-                  Container(
-                    padding: EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Colors.purple[50]!, Colors.purple[100]!],
+                    // Rod Specifications
+                    if (rod['power'] != null || rod['length'] != null) ...[
+                      SizedBox(height: 16),
+                      Container(
+                        padding: EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [Colors.purple[50]!, Colors.purple[100]!],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.purple[200]!),
+                        ),
+                        child: Column(
+                          children: [
+                            if (rod['power'] != null)
+                              _buildSpecRow(
+                                icon: Icons.fitness_center,
+                                label: 'แรงต้าน',
+                                value: rod['power'],
+                                iconColor: Colors.purple[600]!,
+                              ),
+                            if (rod['power'] != null && rod['length'] != null)
+                              Divider(height: 16, color: Colors.purple[200]),
+                            if (rod['length'] != null)
+                              _buildSpecRow(
+                                icon: Icons.straighten,
+                                label: 'ความยาว',
+                                value: '${rod['length']} เมตร',
+                                iconColor: Colors.indigo[600]!,
+                              ),
+                          ],
+                        ),
                       ),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.purple[200]!),
-                    ),
-                    child: Column(
-                      children: [
-                        if (rod['power'] != null)
-                          _buildSpecRow(
-                            icon: Icons.fitness_center,
-                            label: 'แรงต้าน',
-                            value: rod['power'],
-                            iconColor: Colors.purple[600]!,
-                          ),
-                        if (rod['power'] != null && rod['length'] != null)
-                          Divider(height: 16, color: Colors.purple[200]),
-                        if (rod['length'] != null)
-                          _buildSpecRow(
-                            icon: Icons.straighten,
-                            label: 'ความยาว',
-                            value: '${rod['length']} เมตร',
-                            iconColor: Colors.indigo[600]!,
-                          ),
-                      ],
-                    ),
-                  ),
-                ],
+                    ],
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
     );
   }
 
@@ -790,7 +844,8 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
     required Color textColor,
   }) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      constraints: BoxConstraints(maxWidth: 120),
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: BorderRadius.circular(15),
@@ -805,14 +860,17 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 14, color: textColor),
+          Icon(icon, size: 12, color: textColor),
           SizedBox(width: 4),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
-              color: textColor,
+                        Flexible(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: textColor,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
@@ -834,25 +892,32 @@ class _RodPageState extends State<RodPage> with SingleTickerProviderStateMixin {
             color: iconColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(icon, size: 18, color: iconColor),
+          child: Icon(icon, size: 16, color: iconColor),
         ),
         SizedBox(width: 10),
-        Text(
-          '$label: ',
-          style: TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey[700],
-          ),
-        ),
         Expanded(
-          child: Text(
-            value,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: iconColor,
-            ),
+          child: Row(
+            children: [
+              Text(
+                '$label: ',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.grey[700],
+                ),
+              ),
+              Expanded(
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: iconColor,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ),
       ],
