@@ -82,10 +82,15 @@ class HomeScreen extends StatefulWidget {
   _HomeScreenState createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _currentIndex = 0;
   late final List<Widget> _pages;
   bool _isLoading = true;
+  
+  // เพิ่มตัวแปรสำหรับเมนูยืดออกจากด้านข้าง
+  bool _isMenuExpanded = false;
+  late AnimationController _animationController;
+  late Animation<double> _slideAnimation;
 
   @override
   void initState() {
@@ -98,7 +103,27 @@ class _HomeScreenState extends State<HomeScreen> {
       MapPage(),
       BookPage(),
     ];
+    
+    // เริ่มต้น AnimationController
+    _animationController = AnimationController(
+      duration: Duration(milliseconds: 300),
+      vsync: this,
+    );
+    _slideAnimation = Tween<double>(
+      begin: -1.0, // เริ่มต้นที่ด้านซ้ายสุด (ซ่อน)
+      end: 0.0,    // สิ้นสุดที่ตำแหน่งปกติ
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOut,
+    ));
+    
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeData());
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
   }
 
   Future<void> _initializeData() async {
@@ -148,8 +173,24 @@ class _HomeScreenState extends State<HomeScreen> {
     if (mounted) {
       setState(() {
         _currentIndex = index;
+        // ปิดเมนูเมื่อเปลี่ยนหน้า
+        if (_isMenuExpanded) {
+          _toggleMenu();
+        }
       });
     }
+  }
+
+  // ฟังก์ชันสำหรับเปิด/ปิดเมนู
+  void _toggleMenu() {
+    setState(() {
+      _isMenuExpanded = !_isMenuExpanded;
+      if (_isMenuExpanded) {
+        _animationController.forward();
+      } else {
+        _animationController.reverse();
+      }
+    });
   }
 
   Future<void> _signOut() async {
@@ -167,6 +208,57 @@ class _HomeScreenState extends State<HomeScreen> {
         );
       }
     }
+  }
+
+  // ฟังก์ชันสำหรับสร้างรายการเมนู
+  Widget _buildMenuOption({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+    required bool isSelected,
+    Color? textColor,
+    Color? iconColor,
+  }) {
+    return Material(
+      color: isSelected ? Colors.blue.withOpacity(0.1) : Colors.transparent,
+      child: InkWell(
+        onTap: () {
+          onTap();
+          if (title != 'ออกจากระบบ' && title != 'ตั้งค่า' && title != 'เกี่ยวกับ') {
+            _toggleMenu(); // ปิดเมนูหลังจากเลือกหน้าหลัก
+          }
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+          child: Row(
+            children: [
+              Icon(
+                icon, 
+                color: iconColor ?? (isSelected ? Colors.blue[700] : Colors.grey[700]), 
+                size: 24
+              ),
+              SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                    color: textColor ?? (isSelected ? Colors.blue[700] : Colors.grey[800]),
+                  ),
+                ),
+              ),
+              if (isSelected)
+                Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                  color: Colors.blue[700],
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -227,21 +319,168 @@ class _HomeScreenState extends State<HomeScreen> {
               return SizedBox.shrink();
             },
           ),
+          // ปุ่มเมนูยืดออกจากด้านข้าง
           IconButton(
-            icon: Icon(Icons.logout, color: Colors.white),
-            onPressed: _signOut,
+            icon: AnimatedRotation(
+              turns: _isMenuExpanded ? 0.5 : 0.0,
+              duration: Duration(milliseconds: 300),
+              child: Icon(Icons.menu, color: Colors.white),
+            ),
+            onPressed: _toggleMenu,
           ),
         ],
       ),
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.blue[50]!, Colors.blue[100]!],
+      body: Stack(
+        children: [
+          // เนื้อหาหลัก
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.blue[50]!, Colors.blue[100]!],
+              ),
+            ),
+            child: _pages[_currentIndex],
           ),
-        ),
-        child: _pages[_currentIndex],
+          
+          // Overlay เพื่อปิดเมนูเมื่อกดพื้นหลัง
+          if (_isMenuExpanded)
+            GestureDetector(
+              onTap: _toggleMenu,
+              child: Container(
+                width: double.infinity,
+                height: double.infinity,
+                color: Colors.black.withOpacity(0.5),
+              ),
+            ),
+          
+          // เมนูที่ยืดออกจากด้านข้าง
+          AnimatedBuilder(
+            animation: _slideAnimation,
+            builder: (context, child) {
+              return Transform.translate(
+                offset: Offset(_slideAnimation.value * 280, 0), // 280 คือความกว้างของเมนู
+                child: Container(
+                  width: 280,
+                  height: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        spreadRadius: 0,
+                        blurRadius: 10,
+                        offset: Offset(2, 0),
+                      ),
+                    ],
+                  ),
+                  child: SafeArea(
+                    child: Column(
+                      children: [
+                        // ส่วนหัวของเมนู
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color.fromARGB(255, 46, 144, 255),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Icon(
+                                Icons.account_circle,
+                                size: 60,
+                                color: Colors.white,
+                              ),
+                              SizedBox(height: 10),
+                              Text(
+                                'Fishing Guide',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              Text(
+                                'เมนูนำทาง',
+                                style: TextStyle(
+                                  color: Colors.white70,
+                                  fontSize: 14,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // รายการเมนู
+                        Expanded(
+                          child: ListView(
+                            padding: EdgeInsets.zero,
+                            children: [
+                              _buildMenuOption(
+                                icon: Icons.menu_book,
+                                title: 'สมุดบันทึก',
+                                onTap: () {
+                                  _toggleMenu();
+                                  // เพิ่มฟังก์ชันตั้งค่าที่นี่
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('สมุดบันทึก')),
+                                  );
+                                },
+                                isSelected: false,
+                              ),
+                              Divider(),
+                              _buildMenuOption(
+                                icon: Icons.settings,
+                                title: 'ตั้งค่า',
+                                onTap: () {
+                                  _toggleMenu();
+                                  // เพิ่มฟังก์ชันตั้งค่าที่นี่
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('ตั้งค่า - พัฒนาต่อไป')),
+                                  );
+                                },
+                                isSelected: false,
+                              ),
+                              _buildMenuOption(
+                                icon: Icons.info,
+                                title: 'เกี่ยวกับ',
+                                onTap: () {
+                                  _toggleMenu();
+                                  // เพิ่มฟังก์ชันเกี่ยวกับที่นี่
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(content: Text('เกี่ยวกับแอพ - พัฒนาต่อไป')),
+                                  );
+                                },
+                                isSelected: false,
+                              ),
+                            ],
+                          ),
+                        ),
+                        
+                        // ส่วนท้ายของเมนู
+                        Divider(),
+                        _buildMenuOption(
+                          icon: Icons.logout,
+                          title: 'ออกจากระบบ',
+                          onTap: () {
+                            _toggleMenu();
+                            _signOut();
+                          },
+                          isSelected: false,
+                          textColor: Colors.red,
+                          iconColor: Colors.red,
+                        ),
+                        SizedBox(height: 20),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
       ),
       bottomNavigationBar: _buildBottomNavBar(),
     );
