@@ -2,9 +2,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:fishing_guide_app/provider/bait_provider.dart';
 import 'package:fishing_guide_app/provider/fish_provider.dart';
+import 'package:fishing_guide_app/provider/fishlog_provider.dart';
 import 'package:fishing_guide_app/provider/rod_provider.dart';
 import 'package:fishing_guide_app/provider/map_provider.dart';
-import 'package:fishing_guide_app/provider/steps_provider.dart'; // เพิ่ม import StepsProvider
+import 'package:fishing_guide_app/provider/steps_provider.dart';
 import 'package:fishing_guide_app/screens/LoginPage.dart';
 import 'package:flutter/material.dart';
 import 'package:fishing_guide_app/screens/BookPage.dart';
@@ -13,6 +14,7 @@ import 'package:fishing_guide_app/screens/BaitPage.dart';
 import 'package:fishing_guide_app/screens/HomePage.dart';
 import 'package:fishing_guide_app/screens/MapPage.dart';
 import 'package:fishing_guide_app/screens/RodPage.dart';
+import 'package:fishing_guide_app/screens/FishLogPage.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 import 'package:provider/provider.dart';
@@ -31,7 +33,8 @@ void main() async {
         ChangeNotifierProvider(create: (_) => BaitProvider()),
         ChangeNotifierProvider(create: (_) => RodProvider()),
         ChangeNotifierProvider(create: (_) => MapProvider()),
-        ChangeNotifierProvider(create: (_) => StepsProvider()), // เพิ่ม StepsProvider
+        ChangeNotifierProvider(create: (_) => StepsProvider()),
+        ChangeNotifierProvider(create: (_) => FishLogProvider()), // เพิ่ม FishLogProvider
       ],
       child: MyApp(),
     ),
@@ -133,7 +136,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final fishProvider = Provider.of<FishProvider>(context, listen: false);
       final rodProvider = Provider.of<RodProvider>(context, listen: false);
       final baitProvider = Provider.of<BaitProvider>(context, listen: false);
-      final stepsProvider = Provider.of<StepsProvider>(context, listen: false); // เพิ่ม StepsProvider
+      final stepsProvider = Provider.of<StepsProvider>(context, listen: false);
+      final fishLogProvider = Provider.of<FishLogProvider>(context, listen: false); // เพิ่ม FishLogProvider
 
       // Load data sequentially to avoid overwhelming the app
       await fishProvider.fetchFishes();
@@ -150,6 +154,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
       // โหลดข้อมูล Steps สำหรับ BookPage
       await stepsProvider.refreshSteps();
+      if (!mounted) return;
+
+      // เริ่ม stream subscription สำหรับ FishLog
+      fishLogProvider.initializeFishLogStream();
       if (!mounted) return;
 
       if (mounted) {
@@ -208,6 +216,28 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         );
       }
     }
+  }
+
+  // ฟังก์ชันสำหรับนำทางไปหน้า FishLogPage
+  void _navigateToFishLogPage() {
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (context, animation, secondaryAnimation) => FishLogPage(),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return SlideTransition(
+            position: Tween<Offset>(
+              begin: Offset(1.0, 0.0),
+              end: Offset.zero,
+            ).animate(CurvedAnimation(
+              parent: animation,
+              curve: Curves.easeOutCubic,
+            )),
+            child: FadeTransition(opacity: animation, child: child),
+          );
+        },
+        transitionDuration: Duration(milliseconds: 400),
+      ),
+    );
   }
 
   // ฟังก์ชันสำหรับสร้างรายการเมนู
@@ -304,6 +334,25 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           Consumer<StepsProvider>(
             builder: (context, stepsProvider, child) {
               if (stepsProvider.isLoading) {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  ),
+                );
+              }
+              return SizedBox.shrink();
+            },
+          ),
+          // แสดงสถานะการโหลดข้อมูล FishLog
+          Consumer<FishLogProvider>(
+            builder: (context, fishLogProvider, child) {
+              if (fishLogProvider.isLoading) {
                 return Padding(
                   padding: const EdgeInsets.all(16.0),
                   child: SizedBox(
@@ -418,17 +467,19 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           child: ListView(
                             padding: EdgeInsets.zero,
                             children: [
-                              _buildMenuOption(
-                                icon: Icons.menu_book,
-                                title: 'สมุดบันทึก',
-                                onTap: () {
-                                  _toggleMenu();
-                                  // เพิ่มฟังก์ชันตั้งค่าที่นี่
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('สมุดบันทึก')),
+                              // เพิ่มเมนูสมุดบันทึกพร้อม Consumer แสดงจำนวนบันทึก
+                              Consumer<FishLogProvider>(
+                                builder: (context, fishLogProvider, child) {
+                                  return _buildMenuOption(
+                                    icon: Icons.menu_book,
+                                    title: 'สมุดบันทึก ${fishLogProvider.fishLogCount > 0 ? '(${fishLogProvider.fishLogCount})' : ''}',
+                                    onTap: () {
+                                      _toggleMenu();
+                                      _navigateToFishLogPage();
+                                    },
+                                    isSelected: false,
                                   );
                                 },
-                                isSelected: false,
                               ),
                               Divider(),
                               _buildMenuOption(
