@@ -7,6 +7,7 @@ import 'package:fishing_guide_app/provider/rod_provider.dart';
 import 'package:fishing_guide_app/provider/map_provider.dart';
 import 'package:fishing_guide_app/provider/steps_provider.dart';
 import 'package:fishing_guide_app/screens/LoginPage.dart';
+import 'package:fishing_guide_app/screens/upload_screens/EditFishLog.dart';
 import 'package:flutter/material.dart';
 import 'package:fishing_guide_app/screens/BookPage.dart';
 import 'package:fishing_guide_app/screens/FishPage.dart';
@@ -34,7 +35,9 @@ void main() async {
         ChangeNotifierProvider(create: (_) => RodProvider()),
         ChangeNotifierProvider(create: (_) => MapProvider()),
         ChangeNotifierProvider(create: (_) => StepsProvider()),
-        ChangeNotifierProvider(create: (_) => FishLogProvider()), // เพิ่ม FishLogProvider
+        ChangeNotifierProvider(
+          create: (_) => FishLogProvider(),
+        ), // เพิ่ม FishLogProvider
       ],
       child: MyApp(),
     ),
@@ -53,6 +56,36 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
       ),
       home: AuthWrapper(),
+      // วิธีที่ 2: หรือใช้ onGenerateRoute (แนะนำถ้าต้องการส่ง arguments)
+      onGenerateRoute: (RouteSettings settings) {
+        switch (settings.name) {
+          case '/':
+            return MaterialPageRoute(
+              builder: (context) => HomeScreen(),
+              settings: settings,
+            );
+
+          case '/edit-fish-log':
+            // รับ arguments ที่ส่งมา (document ID)
+            final String? documentId = settings.arguments as String?;
+            return MaterialPageRoute(
+              builder: (context) => EditFishLogScreen(documentId: documentId),
+              settings: settings,
+            );
+
+          default:
+            // กรณีไม่เจอ route
+            return MaterialPageRoute(
+              builder:
+                  (context) => Scaffold(
+                    appBar: AppBar(title: Text('Page Not Found')),
+                    body: Center(
+                      child: Text('Page not found: ${settings.name}'),
+                    ),
+                  ),
+            );
+        }
+      },
     );
   }
 }
@@ -89,7 +122,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   int _currentIndex = 0;
   late final List<Widget> _pages;
   bool _isLoading = true;
-  
+
   // เพิ่มตัวแปรสำหรับเมนูยืดออกจากด้านข้าง
   bool _isMenuExpanded = false;
   late AnimationController _animationController;
@@ -106,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       MapPage(),
       BookPage(),
     ];
-    
+
     // เริ่มต้น AnimationController
     _animationController = AnimationController(
       duration: Duration(milliseconds: 300),
@@ -114,12 +147,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
     _slideAnimation = Tween<double>(
       begin: -1.0, // เริ่มต้นที่ด้านซ้ายสุด (ซ่อน)
-      end: 0.0,    // สิ้นสุดที่ตำแหน่งปกติ
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeInOut,
-    ));
-    
+      end: 0.0, // สิ้นสุดที่ตำแหน่งปกติ
+    ).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeInOut),
+    );
+
     WidgetsBinding.instance.addPostFrameCallback((_) => _initializeData());
   }
 
@@ -137,7 +169,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       final rodProvider = Provider.of<RodProvider>(context, listen: false);
       final baitProvider = Provider.of<BaitProvider>(context, listen: false);
       final stepsProvider = Provider.of<StepsProvider>(context, listen: false);
-      final fishLogProvider = Provider.of<FishLogProvider>(context, listen: false); // เพิ่ม FishLogProvider
+      final fishLogProvider = Provider.of<FishLogProvider>(
+        context,
+        listen: false,
+      ); // เพิ่ม FishLogProvider
 
       // Load data sequentially to avoid overwhelming the app
       await fishProvider.fetchFishes();
@@ -228,10 +263,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             position: Tween<Offset>(
               begin: Offset(1.0, 0.0),
               end: Offset.zero,
-            ).animate(CurvedAnimation(
-              parent: animation,
-              curve: Curves.easeOutCubic,
-            )),
+            ).animate(
+              CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+            ),
             child: FadeTransition(opacity: animation, child: child),
           );
         },
@@ -254,7 +288,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: InkWell(
         onTap: () {
           onTap();
-          if (title != 'ออกจากระบบ' && title != 'ตั้งค่า' && title != 'เกี่ยวกับ') {
+          if (title != 'ออกจากระบบ' &&
+              title != 'ตั้งค่า' &&
+              title != 'เกี่ยวกับ') {
             _toggleMenu(); // ปิดเมนูหลังจากเลือกหน้าหลัก
           }
         },
@@ -263,9 +299,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           child: Row(
             children: [
               Icon(
-                icon, 
-                color: iconColor ?? (isSelected ? Colors.blue[700] : Colors.grey[700]), 
-                size: 24
+                icon,
+                color:
+                    iconColor ??
+                    (isSelected ? Colors.blue[700] : Colors.grey[700]),
+                size: 24,
               ),
               SizedBox(width: 16),
               Expanded(
@@ -274,7 +312,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-                    color: textColor ?? (isSelected ? Colors.blue[700] : Colors.grey[800]),
+                    color:
+                        textColor ??
+                        (isSelected ? Colors.blue[700] : Colors.grey[800]),
                   ),
                 ),
               ),
@@ -313,10 +353,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 SizedBox(height: 20),
                 Text(
                   'กำลังโหลดข้อมูล...',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.blue[700],
-                  ),
+                  style: TextStyle(fontSize: 16, color: Colors.blue[700]),
                 ),
               ],
             ),
@@ -392,7 +429,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
             ),
             child: _pages[_currentIndex],
           ),
-          
+
           // Overlay เพื่อปิดเมนูเมื่อกดพื้นหลัง
           if (_isMenuExpanded)
             GestureDetector(
@@ -403,13 +440,16 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                 color: Colors.black.withOpacity(0.5),
               ),
             ),
-          
+
           // เมนูที่ยืดออกจากด้านข้าง
           AnimatedBuilder(
             animation: _slideAnimation,
             builder: (context, child) {
               return Transform.translate(
-                offset: Offset(_slideAnimation.value * 280, 0), // 280 คือความกว้างของเมนู
+                offset: Offset(
+                  _slideAnimation.value * 280,
+                  0,
+                ), // 280 คือความกว้างของเมนู
                 child: Container(
                   width: 280,
                   height: double.infinity,
@@ -461,7 +501,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                           ),
                         ),
-                        
+
                         // รายการเมนู
                         Expanded(
                           child: ListView(
@@ -472,7 +512,8 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                 builder: (context, fishLogProvider, child) {
                                   return _buildMenuOption(
                                     icon: Icons.menu_book,
-                                    title: 'สมุดบันทึก ${fishLogProvider.fishLogCount > 0 ? '(${fishLogProvider.fishLogCount})' : ''}',
+                                    title:
+                                        'สมุดบันทึก ${fishLogProvider.fishLogCount > 0 ? '(${fishLogProvider.fishLogCount})' : ''}',
                                     onTap: () {
                                       _toggleMenu();
                                       _navigateToFishLogPage();
@@ -489,7 +530,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   _toggleMenu();
                                   // เพิ่มฟังก์ชันตั้งค่าที่นี่
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('ตั้งค่า - พัฒนาต่อไป')),
+                                    SnackBar(
+                                      content: Text('ตั้งค่า - พัฒนาต่อไป'),
+                                    ),
                                   );
                                 },
                                 isSelected: false,
@@ -501,7 +544,11 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   _toggleMenu();
                                   // เพิ่มฟังก์ชันเกี่ยวกับที่นี่
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('เกี่ยวกับแอพ - พัฒนาต่อไป')),
+                                    SnackBar(
+                                      content: Text(
+                                        'เกี่ยวกับแอพ - พัฒนาต่อไป',
+                                      ),
+                                    ),
                                   );
                                 },
                                 isSelected: false,
@@ -509,7 +556,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                             ],
                           ),
                         ),
-                        
+
                         // ส่วนท้ายของเมนู
                         Divider(),
                         _buildMenuOption(

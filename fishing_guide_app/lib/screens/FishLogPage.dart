@@ -12,7 +12,6 @@ class FishLogPage extends StatefulWidget {
 
 class _FishLogPageState extends State<FishLogPage>
     with SingleTickerProviderStateMixin {
-  
   late AnimationController _animationController;
   late Animation<double> _headerAnimation;
 
@@ -23,18 +22,17 @@ class _FishLogPageState extends State<FishLogPage>
       duration: Duration(milliseconds: 1200),
       vsync: this,
     );
-    _headerAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
+    _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+    );
     _animationController.forward();
-    
+
     // เริ่ม stream subscription
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final fishLogProvider = Provider.of<FishLogProvider>(context, listen: false);
+      final fishLogProvider = Provider.of<FishLogProvider>(
+        context,
+        listen: false,
+      );
       fishLogProvider.initializeFishLogStream();
     });
   }
@@ -47,28 +45,70 @@ class _FishLogPageState extends State<FishLogPage>
 
   Future<void> _refreshData() async {
     try {
-      _animationController.reset();
-      final fishLogProvider = Provider.of<FishLogProvider>(context, listen: false);
-      await fishLogProvider.fetchFishLogs();
-      _animationController.forward();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error_outline, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: ${e.toString()}'),
-              ),
-            ],
-          ),
-          backgroundColor: Colors.red[600],
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          duration: Duration(seconds: 3),
-        ),
+      // รีเซ็ต animation อย่างปลอดภัย
+      if (mounted && _animationController.isCompleted) {
+        _animationController.reset();
+      }
+
+      final fishLogProvider = Provider.of<FishLogProvider>(
+        context,
+        listen: false,
       );
+      await fishLogProvider.fetchFishLogs();
+
+      // เริ่ม animation ใหม่
+      if (mounted) {
+        _animationController.forward();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error_outline, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text('ไม่สามารถโหลดข้อมูลใหม่ได้: ${e.toString()}'),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red[600],
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _navigateToEdit(String documentId) async {
+    try {
+      final result = await Navigator.pushNamed(
+        context,
+        '/edit-fish-log',
+        arguments: documentId,
+      );
+
+      // ถ้าแก้ไขสำเร็จ ให้รีเฟรชข้อมูล
+      if (result == true && mounted) {
+        await Future.delayed(
+          Duration(milliseconds: 300),
+        ); // รอให้ navigation เสร็จ
+        await _refreshData();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('เกิดข้อผิดพลาด: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -79,232 +119,252 @@ class _FishLogPageState extends State<FishLogPage>
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF1e3c72),
-            Color(0xFF2a5298),
-            Color(0xFF87CEEB),
-          ],
+          colors: [Color(0xFF1e3c72), Color(0xFF2a5298), Color(0xFF87CEEB)],
           stops: [0.0, 0.6, 1.0],
         ),
       ),
-      child: SafeArea(
-        child: Center(
-          child: Container(
-            margin: EdgeInsets.symmetric(
-              horizontal: MediaQuery.of(context).size.width * 0.05,
-              vertical: MediaQuery.of(context).size.height * 0.05,
-            ),
-            height: MediaQuery.of(context).size.height * 0.85,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(25),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black38,
-                  blurRadius: 20,
-                  offset: Offset(0, 10),
-                  spreadRadius: 2,
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(25),
-              child: Column(
-                children: [
-                  // Animated Header
-                  AnimatedBuilder(
-                    animation: _headerAnimation,
-                    builder: (context, child) {
-                      return Transform.scale(
-                        scale: _headerAnimation.value,
-                        child: Container(
-                          padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              colors: [Color(0xFF1e3c72), Color(0xFF2a5298)],
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                            ),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Color(0xFF1e3c72).withOpacity(0.3),
-                                blurRadius: 15,
-                                offset: Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                padding: EdgeInsets.all(8),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Icon(
-                                  Icons.book,
-                                  color: Colors.white,
-                                  size: 24,
-                                ),
-                              ),
-                              SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'บันทึกการตกปลาของฉัน',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w700,
-                                        letterSpacing: 0.5,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Consumer<FishLogProvider>(
-                                      builder: (context, fishLogProvider, child) {
-                                        return Text(
-                                          'ทั้งหมด ${fishLogProvider.fishLogCount} บันทึก',
-                                          style: TextStyle(
-                                            color: Colors.white.withOpacity(0.9),
-                                            fontSize: 14,
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Add Button
-                              Container(
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [Colors.orange[400]!, Colors.orange[600]!],
-                                  ),
-                                  borderRadius: BorderRadius.circular(15),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.orange.withOpacity(0.4),
-                                      blurRadius: 8,
-                                      offset: Offset(0, 4),
-                                    ),
-                                  ],
-                                ),
-                                child: Material(
-                                  color: Colors.transparent,
-                                  child: InkWell(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        PageRouteBuilder(
-                                          pageBuilder: (_, __, ___) => UploadFishLogPage(),
-                                          transitionsBuilder: (_, animation, __, child) {
-                                            return SlideTransition(
-                                              position: Tween<Offset>(
-                                                begin: Offset(1.0, 0.0),
-                                                end: Offset.zero,
-                                              ).animate(CurvedAnimation(
-                                                parent: animation,
-                                                curve: Curves.easeOutCubic,
-                                              )),
-                                              child: FadeTransition(opacity: animation, child: child),
-                                            );
-                                          },
-                                          transitionDuration: Duration(milliseconds: 400),
-                                        ),
-                                      );
-                                    },
-                                    borderRadius: BorderRadius.circular(15),
-                                    child: Padding(
-                                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.add, color: Colors.white, size: 20),
-                                          SizedBox(width: 6),
-                                          Text(
-                                            'เพิ่มบันทึก',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 14,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-
-                  // Fish logs list
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: _refreshData,
-                      color: Color(0xFF1e3c72),
-                      backgroundColor: Colors.white,
-                      child: Consumer<FishLogProvider>(
-                        builder: (context, fishLogProvider, child) {
-                          // แสดง loading state
-                          if (fishLogProvider.isLoading) {
-                            return _buildLoadingState();
-                          }
-
-                          // แสดง error state
-                          if (fishLogProvider.error != null) {
-                            return _buildErrorState(fishLogProvider.error!);
-                          }
-
-                          // แสดง empty state
-                          if (fishLogProvider.fishLogList == null || 
-                              fishLogProvider.fishLogList!.isEmpty) {
-                            return _buildEmptyState();
-                          }
-
-                          // แสดงรายการบันทึก
-                          return AnimationLimiter(
-                            child: ListView.builder(
-                              padding: EdgeInsets.fromLTRB(16, 8, 16, 20),
-                              itemCount: fishLogProvider.fishLogList!.length,
-                              itemBuilder: (context, index) {
-                                final doc = fishLogProvider.fishLogList![index];
-                                final data = doc.data() as Map<String, dynamic>;
-                                
-                                return AnimationConfiguration.staggeredList(
-                                  position: index,
-                                  duration: Duration(milliseconds: 600),
-                                  child: SlideAnimation(
-                                    verticalOffset: 50.0,
-                                    child: FadeInAnimation(
-                                      child: FishLogCard(
-                                        documentId: doc.id,
-                                        imageURL: data['imageURL'] ?? '',
-                                        createdAt: data['createdAt'] as Timestamp?,
-                                        detail: data['detail'] ?? '',
-                                        username: data['username'] ?? 'Unknown User',
-                                      ),
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Fishing Guide', style: TextStyle(color: Colors.white)),
+          backgroundColor: const Color.fromARGB(255, 46, 144, 255),
+        ),
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Center(
+            child: Container(
+              margin: EdgeInsets.symmetric(
+                horizontal: MediaQuery.of(context).size.width * 0.05,
+                vertical: MediaQuery.of(context).size.height * 0.05,
+              ),
+              height: MediaQuery.of(context).size.height * 0.85,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black38,
+                    blurRadius: 20,
+                    offset: Offset(0, 10),
+                    spreadRadius: 2,
                   ),
                 ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(25),
+                child: Column(
+                  children: [
+                    // Animated Header - ใช้ปลอดภัยขึ้น
+                    AnimatedBuilder(
+                      animation: _headerAnimation,
+                      builder: (context, child) {
+                        return Transform.scale(
+                          scale: _headerAnimation.value.clamp(
+                            0.0,
+                            1.0,
+                          ), // จำกัดค่า
+                          child: _buildHeader(),
+                        );
+                      },
+                    ),
+
+                    // Fish logs list
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _refreshData,
+                        color: Color(0xFF1e3c72),
+                        backgroundColor: Colors.white,
+                        child: Consumer<FishLogProvider>(
+                          builder: (context, fishLogProvider, child) {
+                            // แสดง loading state
+                            if (fishLogProvider.isLoading) {
+                              return _buildLoadingState();
+                            }
+
+                            // แสดง error state
+                            if (fishLogProvider.error != null) {
+                              return _buildErrorState(fishLogProvider.error!);
+                            }
+
+                            // แสดง empty state
+                            if (fishLogProvider.fishLogList == null ||
+                                fishLogProvider.fishLogList!.isEmpty) {
+                              return _buildEmptyState();
+                            }
+
+                            // แสดงรายการบันทึก
+                            return AnimationLimiter(
+                              child: ListView.builder(
+                                padding: EdgeInsets.fromLTRB(16, 8, 16, 20),
+                                itemCount: fishLogProvider.fishLogList!.length,
+                                itemBuilder: (context, index) {
+                                  final doc =
+                                      fishLogProvider.fishLogList![index];
+                                  final data =
+                                      doc.data() as Map<String, dynamic>;
+
+                                  return AnimationConfiguration.staggeredList(
+                                    position: index,
+                                    duration: Duration(milliseconds: 600),
+                                    child: SlideAnimation(
+                                      verticalOffset: 50.0,
+                                      child: FadeInAnimation(
+                                        child: FishLogCard(
+                                          documentId: doc.id,
+                                          imageURL: data['imageURL'] ?? '',
+                                          createdAt:
+                                              data['createdAt'] as Timestamp?,
+                                          detail: data['detail'] ?? '',
+                                          username:
+                                              data['username'] ??
+                                              'Unknown User',
+                                          onEditPressed:
+                                              () => _navigateToEdit(
+                                                doc.id,
+                                              ), // เพิ่ม callback
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader() {
+    return Container(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Color(0xFF1e3c72), Color(0xFF2a5298)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Color(0xFF1e3c72).withOpacity(0.3),
+            blurRadius: 15,
+            offset: Offset(0, 5),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(Icons.book, color: Colors.white, size: 24),
+          ),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'บันทึกการตกปลาของฉัน',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Consumer<FishLogProvider>(
+                  builder: (context, fishLogProvider, child) {
+                    return Text(
+                      'ทั้งหมด ${fishLogProvider.fishLogCount} บันทึก',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                      ),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          // Add Button
+          Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.orange[400]!, Colors.orange[600]!],
+              ),
+              borderRadius: BorderRadius.circular(15),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.orange.withOpacity(0.4),
+                  blurRadius: 8,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    PageRouteBuilder(
+                      pageBuilder: (_, __, ___) => UploadFishLogPage(),
+                      transitionsBuilder: (_, animation, __, child) {
+                        return SlideTransition(
+                          position: Tween<Offset>(
+                            begin: Offset(1.0, 0.0),
+                            end: Offset.zero,
+                          ).animate(
+                            CurvedAnimation(
+                              parent: animation,
+                              curve: Curves.easeOutCubic,
+                            ),
+                          ),
+                          child: FadeTransition(
+                            opacity: animation,
+                            child: child,
+                          ),
+                        );
+                      },
+                      transitionDuration: Duration(milliseconds: 400),
+                    ),
+                  );
+                },
+                borderRadius: BorderRadius.circular(15),
+                child: Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.add, color: Colors.white, size: 20),
+                      SizedBox(width: 6),
+                      Text(
+                        'เพิ่มบันทึก',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -314,17 +374,11 @@ class _FishLogPageState extends State<FishLogPage>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(
-            color: Color(0xFF1e3c72),
-            strokeWidth: 3,
-          ),
+          CircularProgressIndicator(color: Color(0xFF1e3c72), strokeWidth: 3),
           SizedBox(height: 16),
           Text(
             'กำลังโหลดบันทึก...',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
           ),
         ],
       ),
@@ -342,11 +396,7 @@ class _FishLogPageState extends State<FishLogPage>
               color: Colors.red[50],
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.error_outline,
-              color: Colors.red[400],
-              size: 60,
-            ),
+            child: Icon(Icons.error_outline, color: Colors.red[400], size: 60),
           ),
           SizedBox(height: 20),
           Text(
@@ -360,10 +410,7 @@ class _FishLogPageState extends State<FishLogPage>
           SizedBox(height: 8),
           Text(
             error,
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 24),
@@ -397,11 +444,7 @@ class _FishLogPageState extends State<FishLogPage>
               color: Colors.blue[50],
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.anchor,
-              color: Colors.blue[300],
-              size: 60,
-            ),
+            child: Icon(Icons.anchor, color: Colors.blue[300], size: 60),
           ),
           SizedBox(height: 20),
           Text(
@@ -415,10 +458,7 @@ class _FishLogPageState extends State<FishLogPage>
           SizedBox(height: 8),
           Text(
             'เริ่มสร้างบันทึกแรกของคุณกันเลย!',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[500], fontSize: 16),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 24),
@@ -433,10 +473,12 @@ class _FishLogPageState extends State<FishLogPage>
                       position: Tween<Offset>(
                         begin: Offset(1.0, 0.0),
                         end: Offset.zero,
-                      ).animate(CurvedAnimation(
-                        parent: animation,
-                        curve: Curves.easeOutCubic,
-                      )),
+                      ).animate(
+                        CurvedAnimation(
+                          parent: animation,
+                          curve: Curves.easeOutCubic,
+                        ),
+                      ),
                       child: FadeTransition(opacity: animation, child: child),
                     );
                   },
@@ -468,6 +510,7 @@ class FishLogCard extends StatelessWidget {
   final Timestamp? createdAt;
   final String detail;
   final String username;
+  final VoidCallback? onEditPressed; // เพิ่ม callback
 
   const FishLogCard({
     Key? key,
@@ -476,6 +519,7 @@ class FishLogCard extends StatelessWidget {
     required this.createdAt,
     required this.detail,
     required this.username,
+    this.onEditPressed, // เพิ่ม parameter
   }) : super(key: key);
 
   @override
@@ -547,10 +591,11 @@ class FishLogCard extends StatelessWidget {
                           child: Center(
                             child: CircularProgressIndicator(
                               color: Color(0xFF1e3c72),
-                              value: loadingProgress.expectedTotalBytes != null
-                                  ? loadingProgress.cumulativeBytesLoaded /
-                                      loadingProgress.expectedTotalBytes!
-                                  : null,
+                              value:
+                                  loadingProgress.expectedTotalBytes != null
+                                      ? loadingProgress.cumulativeBytesLoaded /
+                                          loadingProgress.expectedTotalBytes!
+                                      : null,
                             ),
                           ),
                         );
@@ -604,46 +649,124 @@ class FishLogCard extends StatelessWidget {
                               ],
                             ),
                           ),
-                          PopupMenuButton<String>(
-                            onSelected: (value) {
-                              if (value == 'edit') {
-                                Navigator.pushNamed(
-                                  context,
-                                  '/edit-fish-log',
-                                  arguments: documentId,
+                          Material(
+                            color: Colors.transparent,
+                            child: InkWell(
+                              onTap: () async {
+                                // หา position ของปุ่ม
+                                final RenderBox button =
+                                    context.findRenderObject() as RenderBox;
+                                final RenderBox overlay =
+                                    Navigator.of(
+                                          context,
+                                        ).overlay!.context.findRenderObject()
+                                        as RenderBox;
+                                final RelativeRect position =
+                                    RelativeRect.fromRect(
+                                      Rect.fromPoints(
+                                        button.localToGlobal(
+                                          Offset.zero,
+                                          ancestor: overlay,
+                                        ),
+                                        button.localToGlobal(
+                                          button.size.bottomRight(Offset.zero),
+                                          ancestor: overlay,
+                                        ),
+                                      ),
+                                      Offset.zero & overlay.size,
+                                    );
+
+                                // แสดง menu
+                                final String? selected = await showMenu<String>(
+                                  context: context,
+                                  position: position,
+                                  constraints: BoxConstraints(
+                                    minWidth: 120,
+                                    maxWidth: 200,
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  elevation: 8,
+                                  items: [
+                                    PopupMenuItem<String>(
+                                      value: 'edit',
+                                      height: 40,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.edit,
+                                            size: 16,
+                                            color: Color(0xFF1e3c72),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text('แก้ไข'),
+                                        ],
+                                      ),
+                                    ),
+                                    PopupMenuItem<String>(
+                                      value: 'delete',
+                                      height: 40,
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(
+                                            Icons.delete,
+                                            size: 16,
+                                            color: Colors.red,
+                                          ),
+                                          SizedBox(width: 8),
+                                          Text(
+                                            'ลบ',
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
                                 );
-                              } else if (value == 'delete') {
-                                _showDeleteConfirmation(context, fishLogProvider);
-                              }
-                            },
-                            itemBuilder: (context) => [
-                              PopupMenuItem(
-                                value: 'edit',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.edit, size: 16, color: Color(0xFF1e3c72)),
-                                    SizedBox(width: 8),
-                                    Text('แก้ไข'),
-                                  ],
+
+                                // จัดการ selection
+                                if (selected != null && context.mounted) {
+                                  if (selected == 'edit') {
+                                    if (onEditPressed != null) {
+                                      await Future.delayed(
+                                        Duration(milliseconds: 100),
+                                      );
+                                      if (context.mounted) {
+                                        onEditPressed!();
+                                      }
+                                    }
+                                  } else if (selected == 'delete') {
+                                    await Future.delayed(
+                                      Duration(milliseconds: 100),
+                                    );
+                                    if (context.mounted) {
+                                      _showDeleteConfirmation(
+                                        context,
+                                        fishLogProvider,
+                                      );
+                                    }
+                                  }
+                                }
+                              },
+                              borderRadius: BorderRadius.circular(4),
+                              child: Padding(
+                                padding: EdgeInsets.all(4),
+                                child: Icon(
+                                  Icons.more_vert,
+                                  color: Colors.grey[600],
+                                  size: 20,
                                 ),
                               ),
-                              PopupMenuItem(
-                                value: 'delete',
-                                child: Row(
-                                  children: [
-                                    Icon(Icons.delete, size: 16, color: Colors.red),
-                                    SizedBox(width: 8),
-                                    Text('ลบ', style: TextStyle(color: Colors.red)),
-                                  ],
-                                ),
-                              ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
-                      
+
                       SizedBox(height: 12),
-                      
+
                       // Detail text
                       if (detail.isNotEmpty)
                         Container(
@@ -673,10 +796,13 @@ class FishLogCard extends StatelessWidget {
     );
   }
 
-  void _showDeleteConfirmation(BuildContext context, FishLogProvider fishLogProvider) {
+  void _showDeleteConfirmation(
+    BuildContext context,
+    FishLogProvider fishLogProvider,
+  ) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
+      builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(15),
@@ -688,13 +814,13 @@ class FishLogCard extends StatelessWidget {
               Text('ยืนยันการลบ'),
             ],
           ),
-          content: Text('คุณแน่ใจหรือไม่ที่จะลบบันทึกนี้? การดำเนินการนี้ไม่สามารถยกเลิกได้'),
+          content: Text(
+            'คุณแน่ใจหรือไม่ที่จะลบบันทึกนี้? การดำเนินการนี้ไม่สามารถยกเลิกได้',
+          ),
           actions: [
             TextButton(
               child: Text('ยกเลิก', style: TextStyle(color: Colors.grey[600])),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+              onPressed: () => Navigator.of(dialogContext).pop(),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -706,8 +832,8 @@ class FishLogCard extends StatelessWidget {
               ),
               child: Text('ลบ'),
               onPressed: () {
+                Navigator.of(dialogContext).pop();
                 _deleteFishLog(context, fishLogProvider);
-                Navigator.of(context).pop();
               },
             ),
           ],
@@ -716,39 +842,52 @@ class FishLogCard extends StatelessWidget {
     );
   }
 
-  void _deleteFishLog(BuildContext context, FishLogProvider fishLogProvider) async {
+  void _deleteFishLog(
+    BuildContext context,
+    FishLogProvider fishLogProvider,
+  ) async {
     final success = await fishLogProvider.deleteFishLog(documentId);
-    
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.check_circle, color: Colors.white),
-              SizedBox(width: 8),
-              Text('ลบบันทึกเรียบร้อยแล้ว'),
-            ],
+
+    if (context.mounted) {
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.white),
+                SizedBox(width: 8),
+                Text('ลบบันทึกเรียบร้อยแล้ว'),
+              ],
+            ),
+            backgroundColor: Colors.green,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Icon(Icons.error, color: Colors.white),
-              SizedBox(width: 8),
-              Expanded(child: Text(fishLogProvider.error ?? 'เกิดข้อผิดพลาดในการลบบันทึก')),
-            ],
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                Icon(Icons.error, color: Colors.white),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    fishLogProvider.error ?? 'เกิดข้อผิดพลาดในการลบบันทึก',
+                  ),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
-          backgroundColor: Colors.red,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
+        );
+      }
     }
   }
 }

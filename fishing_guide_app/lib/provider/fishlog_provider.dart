@@ -22,11 +22,11 @@ class FishLogProvider extends ChangeNotifier {
   // Initialize stream subscription
   void initializeFishLogStream() {
     final userId = currentUserId;
-    
+
     // 🔍 เพิ่ม Debug
     print('🔍 Debug: Current User ID = $userId');
     print('🔍 Debug: Current User = ${_auth.currentUser?.email}');
-    
+
     if (userId == null) {
       _error = 'ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบ';
       print('❌ Debug: No user found');
@@ -47,13 +47,15 @@ class FishLogProvider extends ChangeNotifier {
         .listen(
           (QuerySnapshot snapshot) {
             print('🔍 Debug: Received ${snapshot.docs.length} documents');
-            
+
             // 🔍 Debug แต่ละ document
             for (var doc in snapshot.docs) {
               final data = doc.data() as Map<String, dynamic>;
-              print('🔍 Debug Doc: ${doc.id} - userId: ${data['userId']} - user: ${data['username']}');
+              print(
+                '🔍 Debug Doc: ${doc.id} - userId: ${data['userId']} - user: ${data['username']}',
+              );
             }
-            
+
             _fishLogList = snapshot.docs;
             _setLoading(false);
             _clearError();
@@ -71,9 +73,9 @@ class FishLogProvider extends ChangeNotifier {
   // Fetch fish logs manually (for refresh)
   Future<void> fetchFishLogs() async {
     final userId = currentUserId;
-    
+
     print('🔍 Debug: Manual fetch for userId: $userId');
-    
+
     if (userId == null) {
       _setError('ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบ');
       return;
@@ -167,17 +169,22 @@ class FishLogProvider extends ChangeNotifier {
     String? imageURL,
   }) async {
     try {
-      // 🔍 ตรวจสอบว่า document นี้เป็นของ current user หรือไม่
+      // ตรวจสอบว่า document มีอยู่และเป็นของ user
       final doc = await _firestore.collection('fishlogs').doc(documentId).get();
-      if (doc.exists) {
-        final data = doc.data() as Map<String, dynamic>;
-        if (data['userId'] != currentUserId) {
-          _setError('คุณไม่มีสิทธิ์แก้ไขบันทึกนี้');
-          notifyListeners();
-          return false;
-        }
+      if (!doc.exists) {
+        _setError('ไม่พบข้อมูลที่ต้องการแก้ไข');
+        notifyListeners();
+        return false;
       }
 
+      final data = doc.data() as Map<String, dynamic>;
+      if (data['userId'] != currentUserId) {
+        _setError('คุณไม่มีสิทธิ์แก้ไขบันทึกนี้');
+        notifyListeners();
+        return false;
+      }
+
+      // อัพเดทข้อมูล
       final updateData = <String, dynamic>{
         'detail': detail.trim(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -191,7 +198,8 @@ class FishLogProvider extends ChangeNotifier {
           .collection('fishlogs')
           .doc(documentId)
           .update(updateData);
-      
+
+      // ⭐ สำคัญ: ไม่ต้อง notifyListeners() ที่นี่ เพราะ stream จะ update เอง
       print('✅ Debug: Successfully updated document: $documentId');
       return true;
     } catch (e) {
@@ -297,6 +305,10 @@ class FishLogProvider extends ChangeNotifier {
     } else {
       return 'เมื่อสักครู่';
     }
+  }
+
+  void forceRefresh() {
+    notifyListeners();
   }
 
   // Dispose method
