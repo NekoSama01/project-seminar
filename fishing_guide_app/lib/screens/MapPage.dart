@@ -154,20 +154,6 @@ class _MapPageState extends State<MapPage> {
                     ),
                   ),
 
-                  // ปุ่มเพิ่มสถานที่
-                  Positioned(
-                    bottom: 20,
-                    left: 20,
-                    child: FloatingActionButton(
-                      backgroundColor: Colors.blue[600],
-                      child: Icon(Icons.add_location, color: Colors.white),
-                      onPressed: () {
-                        // ไปยังหน้าจอเพิ่มสถานที่ใหม่
-                      },
-                      elevation: 2,
-                    ),
-                  ),
-
                   // Overlay ข้อมูล Marker
                   if (provider.selectedMarkerData != null &&
                       provider.selectedMarkerPosition != null)

@@ -1,26 +1,34 @@
+import 'package:fishing_guide_app/screens/social_screens/commentsheet.dart';
 import 'package:fishing_guide_app/screens/social_screens/upload_post_page.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
-
+import 'package:firebase_auth/firebase_auth.dart';
 class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  Map<String, String> userCache = {}; // เก็บ uid -> username เพื่อลดการ query บ่อย
+  Map<String, String> userCache =
+      {}; // เก็บ uid -> username เพื่อลดการ query บ่อย
+
+  String? currentUserId;
+
+  @override
+  void initState() {
+    super.initState();
+    currentUserId = FirebaseAuth.instance.currentUser?.uid;
+  }
 
   Future<String> getUsername(String uid) async {
     // ถ้ามีใน cache แล้วก็ใช้เลย
     if (userCache.containsKey(uid)) return userCache[uid]!;
 
     try {
-      final userDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(uid)
-          .get();
+      final userDoc =
+          await FirebaseFirestore.instance.collection('users').doc(uid).get();
 
       if (userDoc.exists && userDoc.data()!.containsKey('username')) {
         String username = userDoc['username'];
@@ -33,15 +41,47 @@ class _HomePageState extends State<HomePage> {
     return 'Unknown User';
   }
 
+  Future<void> toggleLike(String postId, String userId) async {
+    final postRef = FirebaseFirestore.instance.collection('posts').doc(postId);
+
+    final snapshot = await postRef.get();
+    final data = snapshot.data();
+
+    if (data != null) {
+      List likedBy = data['likedBy'] ?? [];
+
+      if (likedBy.contains(userId)) {
+        // ถ้ามีอยู่แล้ว → กำลังจะ "unlike"
+        await postRef.update({
+          'likedBy': FieldValue.arrayRemove([userId]),
+          'likesCount': FieldValue.increment(-1),
+        });
+      } else {
+        // ถ้ายังไม่มี → กดไลก์
+        await postRef.update({
+          'likedBy': FieldValue.arrayUnion([userId]),
+          'likesCount': FieldValue.increment(1),
+        });
+      }
+    } else {
+      // post ยังไม่มี field likedBy หรือ likesCount
+      await postRef.set({
+        'likedBy': [userId],
+        'likesCount': 1,
+      }, SetOptions(merge: true));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.blue[50],
       body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection('posts')
-            .orderBy('createdAt', descending: true)
-            .snapshots(),
+        stream:
+            FirebaseFirestore.instance
+                .collection('posts')
+                .orderBy('createdAt', descending: true)
+                .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(child: CircularProgressIndicator());
@@ -90,22 +130,24 @@ class _HomePageState extends State<HomePage> {
                             username,
                             style: TextStyle(fontWeight: FontWeight.bold),
                           ),
-                          subtitle: post['createdAt'] != null
-                              ? Text(
-                                  timeago.format(
-                                    (post['createdAt'] as Timestamp).toDate(),
-                                  ),
-                                  style: TextStyle(fontSize: 12),
-                                )
-                              : Text(''),
+                          subtitle:
+                              post['createdAt'] != null
+                                  ? Text(
+                                    timeago.format(
+                                      (post['createdAt'] as Timestamp).toDate(),
+                                    ),
+                                    style: TextStyle(fontSize: 12),
+                                  )
+                                  : Text(''),
                         ),
                         if (post['imageUrl'] != null)
                           CachedNetworkImage(
                             imageUrl: post['imageUrl'],
-                            placeholder: (context, url) =>
-                                Center(child: CircularProgressIndicator()),
-                            errorWidget: (context, url, error) =>
-                                Icon(Icons.error),
+                            placeholder:
+                                (context, url) =>
+                                    Center(child: CircularProgressIndicator()),
+                            errorWidget:
+                                (context, url, error) => Icon(Icons.error),
                             width: double.infinity,
                             height: 250,
                             fit: BoxFit.cover,
@@ -120,14 +162,23 @@ class _HomePageState extends State<HomePage> {
                             ),
                           ),
                         Padding(
-                          padding:
-                              const EdgeInsets.symmetric(horizontal: 12.0),
+                          padding: const EdgeInsets.symmetric(horizontal: 12.0),
                           child: Row(
                             children: [
                               IconButton(
-                                icon: Icon(Icons.thumb_up_alt_outlined),
+                                icon: Icon(
+                                  (post['likedBy'] != null &&
+                                          (post['likedBy'] as List).contains(
+                                            currentUserId,
+                                          ))
+                                      ? Icons.thumb_up
+                                      : Icons.thumb_up_alt_outlined,
+                                  color: Colors.blue,
+                                ),
                                 onPressed: () {
-                                  // TODO: ทำระบบไลก์
+                                  if (currentUserId != null) {
+                                    toggleLike(posts[index].id, currentUserId!);
+                                  }
                                 },
                               ),
                               Text('${post['likesCount'] ?? 0}'),
@@ -135,7 +186,20 @@ class _HomePageState extends State<HomePage> {
                               IconButton(
                                 icon: Icon(Icons.comment_outlined),
                                 onPressed: () {
-                                  // TODO: ทำระบบคอมเมนต์
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    backgroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(
+                                        top: Radius.circular(20),
+                                      ),
+                                    ),
+                                    builder:
+                                        (context) => CommentSheet(
+                                          postId: posts[index].id,
+                                        ),
+                                  );
                                 },
                               ),
                             ],

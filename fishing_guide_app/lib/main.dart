@@ -56,7 +56,6 @@ class MyApp extends StatelessWidget {
         scaffoldBackgroundColor: Colors.white,
       ),
       home: AuthWrapper(),
-      // วิธีที่ 2: หรือใช้ onGenerateRoute (แนะนำถ้าต้องการส่ง arguments)
       onGenerateRoute: (RouteSettings settings) {
         switch (settings.name) {
           case '/':

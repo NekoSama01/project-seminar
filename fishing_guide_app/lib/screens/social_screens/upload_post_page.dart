@@ -68,6 +68,7 @@ class _UploadPostPageState extends State<UploadPostPage> {
         'imageUrl': imageUrl,
         'createdAt': FieldValue.serverTimestamp(),
         'likesCount': 0,
+        'likedBy': [],
       });
 
       ScaffoldMessenger.of(

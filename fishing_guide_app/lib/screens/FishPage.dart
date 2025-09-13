@@ -24,13 +24,9 @@ class _FishPageState extends State<FishPage>
       duration: Duration(milliseconds: 1200),
       vsync: this,
     );
-    _headerAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
+    _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+    );
     _animationController.forward();
   }
 
@@ -60,7 +56,9 @@ class _FishPageState extends State<FishPage>
           ),
           backgroundColor: Colors.red[600],
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           duration: Duration(seconds: 3),
         ),
       );
@@ -72,17 +70,17 @@ class _FishPageState extends State<FishPage>
     if (fishProvider.fishList == null || _searchQuery.isEmpty) {
       return fishProvider.fishList ?? [];
     }
-    
+
     return fishProvider.fishList!.where((fishDoc) {
       final fish = fishDoc.data() as Map<String, dynamic>;
       final nameTH = fish['nameTH']?.toString().toLowerCase() ?? '';
       final nameEN = fish['nameEN']?.toString().toLowerCase() ?? '';
       final habitat = fish['habitat']?.toString().toLowerCase() ?? '';
       final searchLower = _searchQuery.toLowerCase();
-      
-      return nameTH.contains(searchLower) || 
-             nameEN.contains(searchLower) || 
-             habitat.contains(searchLower);
+
+      return nameTH.contains(searchLower) ||
+          nameEN.contains(searchLower) ||
+          habitat.contains(searchLower);
     }).toList();
   }
 
@@ -95,11 +93,7 @@ class _FishPageState extends State<FishPage>
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF667eea),
-            Color(0xFF764ba2),
-            Color(0xFFf093fb),
-          ],
+          colors: [Color(0xFF667eea), Color(0xFF764ba2), Color(0xFFf093fb)],
           stops: [0.0, 0.5, 1.0],
         ),
       ),
@@ -203,17 +197,21 @@ class _FishPageState extends State<FishPage>
                                     Icons.search,
                                     color: Color(0xFF667eea),
                                   ),
-                                  suffixIcon: _searchQuery.isNotEmpty
-                                      ? IconButton(
-                                          icon: Icon(Icons.clear, color: Colors.grey[500]),
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            setState(() {
-                                              _searchQuery = '';
-                                            });
-                                          },
-                                        )
-                                      : null,
+                                  suffixIcon:
+                                      _searchQuery.isNotEmpty
+                                          ? IconButton(
+                                            icon: Icon(
+                                              Icons.clear,
+                                              color: Colors.grey[500],
+                                            ),
+                                            onPressed: () {
+                                              _searchController.clear();
+                                              setState(() {
+                                                _searchQuery = '';
+                                              });
+                                            },
+                                          )
+                                          : null,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(15),
                                     borderSide: BorderSide.none,
@@ -280,7 +278,12 @@ class _FishPageState extends State<FishPage>
             child: SlideAnimation(
               verticalOffset: 50.0,
               child: FadeInAnimation(
-                child: _buildEnhancedFishCard(context, fish, documentId, fishProvider),
+                child: _buildEnhancedFishCard(
+                  context,
+                  fish,
+                  documentId,
+                  fishProvider,
+                ),
               ),
             ),
           );
@@ -320,11 +323,7 @@ class _FishPageState extends State<FishPage>
                           color: Colors.white,
                         ),
                         SizedBox(height: 8),
-                        Container(
-                          height: 16,
-                          width: 150,
-                          color: Colors.white,
-                        ),
+                        Container(height: 16, width: 150, color: Colors.white),
                         SizedBox(height: 8),
                         Row(
                           children: [
@@ -364,11 +363,7 @@ class _FishPageState extends State<FishPage>
               color: Colors.red[50],
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.error_outline,
-              color: Colors.red[400],
-              size: 60,
-            ),
+            child: Icon(Icons.error_outline, color: Colors.red[400], size: 60),
           ),
           SizedBox(height: 20),
           Text(
@@ -382,10 +377,7 @@ class _FishPageState extends State<FishPage>
           SizedBox(height: 8),
           Text(
             'ไม่สามารถโหลดข้อมูลปลาได้',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 24),
@@ -436,13 +428,10 @@ class _FishPageState extends State<FishPage>
           ),
           SizedBox(height: 8),
           Text(
-            _searchQuery.isNotEmpty 
+            _searchQuery.isNotEmpty
                 ? 'ลองค้นหาด้วยคำอื่น'
                 : 'กดรีเฟรชเพื่อโหลดข้อมูลใหม่',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey[500], fontSize: 14),
           ),
           SizedBox(height: 20),
           if (_searchQuery.isEmpty)
@@ -450,9 +439,7 @@ class _FishPageState extends State<FishPage>
               onPressed: () => _refreshData(context),
               icon: Icon(Icons.refresh),
               label: Text('รีเฟรชข้อมูล'),
-              style: TextButton.styleFrom(
-                foregroundColor: Color(0xFF667eea),
-              ),
+              style: TextButton.styleFrom(foregroundColor: Color(0xFF667eea)),
             ),
         ],
       ),
@@ -485,19 +472,20 @@ class _FishPageState extends State<FishPage>
             Navigator.push(
               context,
               PageRouteBuilder(
-                pageBuilder: (_, __, ___) => FishDetailPage(
-                  fishData: fish,
-                  documentId: documentId,
-                ),
+                pageBuilder:
+                    (_, __, ___) =>
+                        FishDetailPage(fishData: fish, documentId: documentId),
                 transitionsBuilder: (_, animation, __, child) {
                   return SlideTransition(
                     position: Tween<Offset>(
                       begin: Offset(1.0, 0.0),
                       end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    )),
+                    ).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
                     child: FadeTransition(opacity: animation, child: child),
                   );
                 },
@@ -510,10 +498,7 @@ class _FishPageState extends State<FishPage>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.grey[200]!,
-                width: 1,
-              ),
+              border: Border.all(color: Colors.grey[200]!, width: 1),
             ),
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -554,7 +539,8 @@ class _FishPageState extends State<FishPage>
                                 );
                               }
 
-                              if (snapshot.connectionState == ConnectionState.done &&
+                              if (snapshot.connectionState ==
+                                      ConnectionState.done &&
                                   snapshot.hasData &&
                                   snapshot.data != null) {
                                 return CircleAvatar(
@@ -608,16 +594,24 @@ class _FishPageState extends State<FishPage>
                               children: [
                                 _buildEnhancedChip(
                                   icon: Icons.straighten,
-                                  value: '${fish['average length'] ?? 'N/A'} cm',
+                                  value:
+                                      '${fish['average length'] ?? 'N/A'} cm',
                                   gradient: LinearGradient(
-                                    colors: [Colors.blue[100]!, Colors.blue[200]!],
+                                    colors: [
+                                      Colors.blue[100]!,
+                                      Colors.blue[200]!,
+                                    ],
                                   ),
                                 ),
                                 _buildEnhancedChip(
                                   icon: Icons.monitor_weight,
-                                  value: '${fish['average weight'] ?? 'N/A'} kg',
+                                  value:
+                                      '${fish['average weight'] ?? 'N/A'} kg',
                                   gradient: LinearGradient(
-                                    colors: [Colors.green[100]!, Colors.green[200]!],
+                                    colors: [
+                                      Colors.green[100]!,
+                                      Colors.green[200]!,
+                                    ],
                                   ),
                                 ),
                                 if (fish['difficulty'] != null)
@@ -647,7 +641,8 @@ class _FishPageState extends State<FishPage>
                         SizedBox(height: 8),
                         _buildEnhancedInfoRow(
                           icon: Icons.calendar_today,
-                          text: 'ฤดู: ${fish['seasons']?.join(', ') ?? 'ตลอดปี'}',
+                          text:
+                              'ฤดู: ${fish['seasons']?.join(', ') ?? 'ตลอดปี'}',
                           iconColor: Colors.orange[400]!,
                         ),
                       ],
@@ -768,11 +763,7 @@ class _FishPageState extends State<FishPage>
             color: iconColor.withOpacity(0.1),
             borderRadius: BorderRadius.circular(6),
           ),
-          child: Icon(
-            icon,
-            size: 16,
-            color: iconColor,
-          ),
+          child: Icon(icon, size: 16, color: iconColor),
         ),
         SizedBox(width: 8),
         Expanded(

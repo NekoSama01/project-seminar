@@ -24,15 +24,11 @@ class _BaitPageState extends State<BaitPage>
       duration: Duration(milliseconds: 1200),
       vsync: this,
     );
-    _headerAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
+    _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
+    );
     _animationController.forward();
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<BaitProvider>(context, listen: false).fetchBaits();
     });
@@ -64,7 +60,9 @@ class _BaitPageState extends State<BaitPage>
           ),
           backgroundColor: Colors.red[600],
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           duration: Duration(seconds: 3),
         ),
       );
@@ -76,19 +74,20 @@ class _BaitPageState extends State<BaitPage>
     if (baitProvider.baitList == null || _searchQuery.isEmpty) {
       return baitProvider.baitList ?? [];
     }
-    
+
     return baitProvider.baitList!.where((baitDoc) {
       final bait = baitDoc.data() as Map<String, dynamic>;
-      final nameTH = (bait['nameTH'] ?? bait['name'] ?? '').toString().toLowerCase();
+      final nameTH =
+          (bait['nameTH'] ?? bait['name'] ?? '').toString().toLowerCase();
       final nameEN = bait['nameEN']?.toString().toLowerCase() ?? '';
       final type = bait['type']?.toString().toLowerCase() ?? '';
       final target = bait['target']?.toString().toLowerCase() ?? '';
       final searchLower = _searchQuery.toLowerCase();
-      
-      return nameTH.contains(searchLower) || 
-             nameEN.contains(searchLower) || 
-             type.contains(searchLower) ||
-             target.contains(searchLower);
+
+      return nameTH.contains(searchLower) ||
+          nameEN.contains(searchLower) ||
+          type.contains(searchLower) ||
+          target.contains(searchLower);
     }).toList();
   }
 
@@ -101,11 +100,7 @@ class _BaitPageState extends State<BaitPage>
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF11998e),
-            Color(0xFF38ef7d),
-            Color(0xFF90EE90),
-          ],
+          colors: [Color(0xFF11998e), Color(0xFF38ef7d), Color(0xFF90EE90)],
           stops: [0.0, 0.6, 1.0],
         ),
       ),
@@ -172,7 +167,8 @@ class _BaitPageState extends State<BaitPage>
                                 SizedBox(width: 12),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         'เหยื่อตกปลาแต่ละชนิด',
@@ -185,9 +181,9 @@ class _BaitPageState extends State<BaitPage>
                                       ),
                                       SizedBox(height: 4),
                                       Text(
-                                        baitProvider.baitList?.length != null 
-                                          ? 'ทั้งหมด ${baitProvider.baitList!.length} รายการ'
-                                          : 'กำลังโหลดข้อมูล...',
+                                        baitProvider.baitList?.length != null
+                                            ? 'ทั้งหมด ${baitProvider.baitList!.length} รายการ'
+                                            : 'กำลังโหลดข้อมูล...',
                                         style: TextStyle(
                                           color: Colors.white.withOpacity(0.9),
                                           fontSize: 14,
@@ -226,17 +222,21 @@ class _BaitPageState extends State<BaitPage>
                                     Icons.search,
                                     color: Color(0xFF11998e),
                                   ),
-                                  suffixIcon: _searchQuery.isNotEmpty
-                                      ? IconButton(
-                                          icon: Icon(Icons.clear, color: Colors.grey[500]),
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            setState(() {
-                                              _searchQuery = '';
-                                            });
-                                          },
-                                        )
-                                      : null,
+                                  suffixIcon:
+                                      _searchQuery.isNotEmpty
+                                          ? IconButton(
+                                            icon: Icon(
+                                              Icons.clear,
+                                              color: Colors.grey[500],
+                                            ),
+                                            onPressed: () {
+                                              _searchController.clear();
+                                              setState(() {
+                                                _searchQuery = '';
+                                              });
+                                            },
+                                          )
+                                          : null,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(15),
                                     borderSide: BorderSide.none,
@@ -303,7 +303,12 @@ class _BaitPageState extends State<BaitPage>
             child: SlideAnimation(
               verticalOffset: 50.0,
               child: FadeInAnimation(
-                child: _buildEnhancedBaitCard(context, bait, documentId, baitProvider),
+                child: _buildEnhancedBaitCard(
+                  context,
+                  bait,
+                  documentId,
+                  baitProvider,
+                ),
               ),
             ),
           );
@@ -350,23 +355,11 @@ class _BaitPageState extends State<BaitPage>
                           color: Colors.white,
                         ),
                         SizedBox(height: 8),
-                        Container(
-                          height: 16,
-                          width: 150,
-                          color: Colors.white,
-                        ),
+                        Container(height: 16, width: 150, color: Colors.white),
                         SizedBox(height: 8),
-                        Container(
-                          height: 24,
-                          width: 100,
-                          color: Colors.white,
-                        ),
+                        Container(height: 24, width: 100, color: Colors.white),
                         SizedBox(height: 8),
-                        Container(
-                          height: 16,
-                          width: 200,
-                          color: Colors.white,
-                        ),
+                        Container(height: 16, width: 200, color: Colors.white),
                       ],
                     ),
                   ),
@@ -390,11 +383,7 @@ class _BaitPageState extends State<BaitPage>
               color: Colors.red[50],
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.error_outline,
-              color: Colors.red[400],
-              size: 60,
-            ),
+            child: Icon(Icons.error_outline, color: Colors.red[400], size: 60),
           ),
           SizedBox(height: 20),
           Text(
@@ -408,10 +397,7 @@ class _BaitPageState extends State<BaitPage>
           SizedBox(height: 8),
           Text(
             'ไม่สามารถโหลดข้อมูลเหยื่อตกปลาได้',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 24),
@@ -453,7 +439,9 @@ class _BaitPageState extends State<BaitPage>
           ),
           SizedBox(height: 20),
           Text(
-            _searchQuery.isNotEmpty ? 'ไม่พบผลการค้นหา' : 'ไม่พบข้อมูลเหยื่อตกปลา',
+            _searchQuery.isNotEmpty
+                ? 'ไม่พบผลการค้นหา'
+                : 'ไม่พบข้อมูลเหยื่อตกปลา',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -462,13 +450,10 @@ class _BaitPageState extends State<BaitPage>
           ),
           SizedBox(height: 8),
           Text(
-            _searchQuery.isNotEmpty 
+            _searchQuery.isNotEmpty
                 ? 'ลองค้นหาด้วยคำอื่น'
                 : 'กดรีเฟรชเพื่อโหลดข้อมูลใหม่',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey[500], fontSize: 14),
           ),
           SizedBox(height: 20),
           if (_searchQuery.isEmpty)
@@ -476,9 +461,7 @@ class _BaitPageState extends State<BaitPage>
               onPressed: () => _refreshData(context),
               icon: Icon(Icons.refresh),
               label: Text('รีเฟรชข้อมูล'),
-              style: TextButton.styleFrom(
-                foregroundColor: Color(0xFF11998e),
-              ),
+              style: TextButton.styleFrom(foregroundColor: Color(0xFF11998e)),
             ),
         ],
       ),
@@ -494,7 +477,8 @@ class _BaitPageState extends State<BaitPage>
     final baitType = bait['type'] ?? 'ไม่ระบุประเภท';
     final typeColor = baitProvider.getTypeColor(baitType);
     final textColor = baitProvider.getTypeTextColor(baitType);
-    final hasPrice = bait['price'] != null && bait['price'].toString().isNotEmpty;
+    final hasPrice =
+        bait['price'] != null && bait['price'].toString().isNotEmpty;
 
     return Container(
       margin: EdgeInsets.only(bottom: 16),
@@ -516,19 +500,20 @@ class _BaitPageState extends State<BaitPage>
             Navigator.push(
               context,
               PageRouteBuilder(
-                pageBuilder: (_, __, ___) => BaitDetailPage(
-                  baitData: bait,
-                  documentId: documentId,
-                ),
+                pageBuilder:
+                    (_, __, ___) =>
+                        BaitDetailPage(baitData: bait, documentId: documentId),
                 transitionsBuilder: (_, animation, __, child) {
                   return SlideTransition(
                     position: Tween<Offset>(
                       begin: Offset(1.0, 0.0),
                       end: Offset.zero,
-                    ).animate(CurvedAnimation(
-                      parent: animation,
-                      curve: Curves.easeOutCubic,
-                    )),
+                    ).animate(
+                      CurvedAnimation(
+                        parent: animation,
+                        curve: Curves.easeOutCubic,
+                      ),
+                    ),
                     child: FadeTransition(opacity: animation, child: child),
                   );
                 },
@@ -541,10 +526,7 @@ class _BaitPageState extends State<BaitPage>
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.grey[200]!,
-                width: 1,
-              ),
+              border: Border.all(color: Colors.grey[200]!, width: 1),
             ),
             child: Padding(
               padding: EdgeInsets.all(16),
@@ -600,13 +582,20 @@ class _BaitPageState extends State<BaitPage>
                               ),
                             ),
                             SizedBox(height: 8),
-                            _buildEnhancedTypeChip(baitType, typeColor, textColor),
+                            _buildEnhancedTypeChip(
+                              baitType,
+                              typeColor,
+                              textColor,
+                            ),
                           ],
                         ),
                       ),
                       if (hasPrice)
                         Container(
-                          padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
                               colors: [Colors.amber[100]!, Colors.amber[200]!],
@@ -623,9 +612,11 @@ class _BaitPageState extends State<BaitPage>
                           child: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              Icon(Icons.payments, 
-                                   size: 18, 
-                                   color: Colors.amber[800]),
+                              Icon(
+                                Icons.payments,
+                                size: 18,
+                                color: Colors.amber[800],
+                              ),
                               SizedBox(width: 4),
                               Text(
                                 '${bait['price']} ฿',
@@ -640,8 +631,9 @@ class _BaitPageState extends State<BaitPage>
                         ),
                     ],
                   ),
-                  
-                  if (bait['description'] != null && bait['description'].toString().isNotEmpty) ...[
+
+                  if (bait['description'] != null &&
+                      bait['description'].toString().isNotEmpty) ...[
                     SizedBox(height: 12),
                     Container(
                       padding: EdgeInsets.all(12),
@@ -653,9 +645,11 @@ class _BaitPageState extends State<BaitPage>
                       child: Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.description, 
-                               size: 16, 
-                               color: Colors.grey[600]),
+                          Icon(
+                            Icons.description,
+                            size: 16,
+                            color: Colors.grey[600],
+                          ),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -673,7 +667,7 @@ class _BaitPageState extends State<BaitPage>
                       ),
                     ),
                   ],
-                  
+
                   SizedBox(height: 12),
                   _buildTargetFishInfo(bait),
                 ],
@@ -719,10 +713,7 @@ class _BaitPageState extends State<BaitPage>
             height: 80,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(10),
-              image: DecorationImage(
-                image: snapshot.data!,
-                fit: BoxFit.cover,
-              ),
+              image: DecorationImage(image: snapshot.data!, fit: BoxFit.cover),
             ),
           );
         }
@@ -745,15 +736,16 @@ class _BaitPageState extends State<BaitPage>
     );
   }
 
-  Widget _buildEnhancedTypeChip(String baitType, Color typeColor, Color textColor) {
+  Widget _buildEnhancedTypeChip(
+    String baitType,
+    Color typeColor,
+    Color textColor,
+  ) {
     return Container(
       padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [
-            typeColor.withOpacity(0.2),
-            typeColor.withOpacity(0.3),
-          ],
+          colors: [typeColor.withOpacity(0.2), typeColor.withOpacity(0.3)],
         ),
         borderRadius: BorderRadius.circular(15),
         border: Border.all(color: typeColor.withOpacity(0.5)),
@@ -792,9 +784,7 @@ class _BaitPageState extends State<BaitPage>
     return Container(
       padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.blue[50]!, Colors.blue[100]!],
-        ),
+        gradient: LinearGradient(colors: [Colors.blue[50]!, Colors.blue[100]!]),
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: Colors.blue[200]!),
         boxShadow: [
