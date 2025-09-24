@@ -521,7 +521,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   );
                                 },
                               ),
-                              Divider(),
+                              /*Divider(), ไม่ใช้แล้ว
                               _buildMenuOption(
                                 icon: Icons.settings,
                                 title: 'ตั้งค่า',
@@ -551,7 +551,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                                   );
                                 },
                                 isSelected: false,
-                              ),
+                              ),*/
                             ],
                           ),
                         ),

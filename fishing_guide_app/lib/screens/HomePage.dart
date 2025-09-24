@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:firebase_auth/firebase_auth.dart';
+
 class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
@@ -141,17 +142,58 @@ class _HomePageState extends State<HomePage> {
                                   : Text(''),
                         ),
                         if (post['imageUrl'] != null)
-                          CachedNetworkImage(
-                            imageUrl: post['imageUrl'],
-                            placeholder:
-                                (context, url) =>
-                                    Center(child: CircularProgressIndicator()),
-                            errorWidget:
-                                (context, url, error) => Icon(Icons.error),
-                            width: double.infinity,
-                            height: 250,
-                            fit: BoxFit.cover,
+                          GestureDetector(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                barrierColor: Colors.black87, // พื้นหลังมืด
+                                builder: (context) {
+                                  return Dialog(
+                                    backgroundColor: Colors.transparent,
+                                    insetPadding: EdgeInsets.all(10),
+                                    child: Hero(
+                                      tag: post['imageUrl'],
+                                      child: InteractiveViewer(
+                                        child: CachedNetworkImage(
+                                          imageUrl: post['imageUrl'],
+                                          fit: BoxFit.contain,
+                                          errorWidget:
+                                              (context, url, error) => Icon(
+                                                Icons.error,
+                                                color: Colors.white,
+                                              ),
+                                        ),
+                                      ),
+                                    ),
+                                  );
+                                },
+                              );
+                            },
+                            child: Hero(
+                              tag: post['imageUrl'],
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.vertical(
+                                  top: Radius.circular(15),
+                                ),
+                                child: SizedBox(
+                                  width: double.infinity,
+                                  height: 250,
+                                  child: CachedNetworkImage(
+                                    imageUrl: post['imageUrl'],
+                                    placeholder:
+                                        (context, url) => Center(
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                    errorWidget:
+                                        (context, url, error) =>
+                                            Icon(Icons.error),
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+                            ),
                           ),
+
                         if (post['text'] != null &&
                             post['text'].toString().isNotEmpty)
                           Padding(
