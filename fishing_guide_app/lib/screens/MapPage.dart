@@ -1,0 +1,371 @@
+import 'dart:math' as math;
+import 'package:fishing_guide_app/provider/map_provider.dart';
+import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+class MapPage extends StatefulWidget {
+  @override
+  _MapPageState createState() => _MapPageState();
+}
+
+class _MapPageState extends State<MapPage> {
+  GoogleMapController? _mapController;
+  CameraPosition? _initialPosition;
+  final List<String> searchKeywords = ["ฤดูร้อน", "ฤดูฝน", "ฤดูหนาว"];
+  String? selectedKeyword; // เก็บ keyword ที่เลือก
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeMap();
+  }
+
+  Future<void> _initializeMap() async {
+    final mapProvider = Provider.of<MapProvider>(context, listen: false);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await mapProvider.fetchLocations();
+
+      if (mounted) {
+        setState(() {
+          if (mapProvider.markersBounds != null &&
+              mapProvider.markers.isNotEmpty) {
+            _initialPosition = CameraPosition(
+              target: _calculateCenter(mapProvider.markersBounds!),
+              zoom: _calculateZoomLevel(mapProvider.markersBounds!),
+            );
+          } else {
+            _initialPosition = const CameraPosition(
+              target: LatLng(16.74804986504787, 100.19208920772702),
+              zoom: 12,
+            );
+          }
+        });
+      }
+    });
+  }
+
+  LatLng _calculateCenter(LatLngBounds bounds) {
+    return LatLng(
+      (bounds.northeast.latitude + bounds.southwest.latitude) / 2,
+      (bounds.northeast.longitude + bounds.southwest.longitude) / 2,
+    );
+  }
+
+  double _calculateZoomLevel(LatLngBounds bounds) {
+    const double padding = 100;
+    final double width = MediaQuery.of(context).size.width;
+    final double height = MediaQuery.of(context).size.height;
+
+    final double latDiff =
+        bounds.northeast.latitude - bounds.southwest.latitude;
+    final double lngDiff =
+        bounds.northeast.longitude - bounds.southwest.longitude;
+
+    final double latZoom =
+        (math.log(height * 360 / (256 * latDiff)) / math.ln2) / 2;
+    final double lngZoom =
+        (math.log(width * 360 / (256 * lngDiff)) / math.ln2) / 2;
+
+    return math.min(latZoom, lngZoom) - math.log(padding / 256) / math.ln2;
+  }
+
+  Future<void> _onMapCreated(GoogleMapController controller) async {
+    _mapController = controller;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final mapProvider = Provider.of<MapProvider>(context, listen: false);
+      if (mapProvider.markersBounds != null && mounted) {
+        await _mapController?.animateCamera(
+          CameraUpdate.newLatLngBounds(mapProvider.markersBounds!, 100),
+        );
+      }
+    });
+  }
+
+  // ฟังก์ชันสำหรับกรอง markers
+  void _filterMarkers(String? keyword) {
+    final mapProvider = Provider.of<MapProvider>(context, listen: false);
+    
+    setState(() {
+      selectedKeyword = keyword;
+    });
+    
+    mapProvider.filterMarkers(keyword);
+    
+    // อัปเดตแผนที่ให้แสดง bounds ใหม่
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mapProvider.markersBounds != null && mounted) {
+        await _mapController?.animateCamera(
+          CameraUpdate.newLatLngBounds(mapProvider.markersBounds!, 100),
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_initialPosition == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Consumer<MapProvider>(
+      builder: (context, provider, child) {
+        return FutureBuilder(
+          future: provider.isLoading ? null : Future.value(),
+          builder: (context, snapshot) {
+            return Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.blue[50]!, Colors.blue[100]!],
+                ),
+              ),
+              child: Stack(
+                children: [
+                  GoogleMap(
+                    initialCameraPosition: _initialPosition!,
+                    mapType: MapType.normal,
+                    myLocationEnabled: true,
+                    myLocationButtonEnabled: false,
+                    markers: provider.markers,
+                    onMapCreated: _onMapCreated,
+                  ),
+
+                  // ปุ่ม GPS
+                  Positioned(
+                    bottom: 80,
+                    left: 20,
+                    child: FloatingActionButton(
+                      mini: true,
+                      backgroundColor: Colors.white,
+                      child: Icon(Icons.gps_fixed, color: Colors.blue[600]),
+                      onPressed: () async {
+                        if (provider.currentLocation != null) {
+                          await _mapController?.animateCamera(
+                            CameraUpdate.newLatLng(provider.currentLocation!),
+                          );
+                        }
+                      },
+                      elevation: 2,
+                    ),
+                  ),
+
+                  // Overlay ข้อมูล Marker
+                  if (provider.selectedMarkerData != null &&
+                      provider.selectedMarkerPosition != null)
+                    Positioned(
+                      bottom: 160,
+                      left: 20,
+                      right: 20,
+                      child: Card(
+                        elevation: 6,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: Text(
+                                      provider.selectedMarkerData!['name'] ??
+                                          'ไม่มีชื่อ',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                      textAlign: TextAlign.left,
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: Icon(Icons.close),
+                                    onPressed: () {
+                                      provider.clearSelectedMarker();
+                                    },
+                                  ),
+                                ],
+                              ),
+                              if (provider.selectedMarkerData!['address'] != null)
+                                Text(
+                                  provider.selectedMarkerData!['address'],
+                                  textAlign: TextAlign.left,
+                                ),
+                              if (provider.selectedMarkerData!['Contact'] != null)
+                                Text(
+                                  provider.selectedMarkerData!['Contact'],
+                                  textAlign: TextAlign.left,
+                                ),
+                              if (provider.selectedMarkerData!['facebook'] != null)
+                                Text(
+                                  provider.selectedMarkerData!['facebook'],
+                                  textAlign: TextAlign.left,
+                                ),
+                              if (provider.selectedMarkerData!['instragram'] != null)
+                                Text(
+                                  provider.selectedMarkerData!['instragram'],
+                                  textAlign: TextAlign.left,
+                                ),
+                              if (provider.selectedMarkerData!['tiktok'] != null)
+                                Text(
+                                  provider.selectedMarkerData!['tiktok'],
+                                  textAlign: TextAlign.left,
+                                ),
+                              if (provider.selectedMarkerData!['fishs'] != null)
+                                Text(
+                                  provider.selectedMarkerData!['fishs'],
+                                  textAlign: TextAlign.left,
+                                ),
+                              Text("อยากทราบข้อมูลเพิ่มเติมกดปุ่มแผนที่ด้านล่าง"),
+                              SizedBox(height: 8),
+                              ElevatedButton.icon(
+                                icon: const Icon(Icons.map),
+                                label: const Text('แผนที่'),
+                                onPressed: () async {
+                                  final pos = provider.selectedMarkerPosition!;
+                                  final Uri googleMapsUrl = Uri.parse(
+                                    "https://www.google.com/maps?q=${pos.latitude},${pos.longitude}&z=16",
+                                  );
+
+                                  if (await canLaunchUrl(googleMapsUrl)) {
+                                    await launchUrl(
+                                      googleMapsUrl,
+                                      mode: LaunchMode.externalApplication,
+                                    );
+                                  } else {
+                                    throw "Could not open Google Maps.";
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
+                  // Search Bar
+                  Positioned(
+                    top: 40,
+                    left: 20,
+                    right: 20,
+                    child: Material(
+                      elevation: 4,
+                      borderRadius: BorderRadius.circular(12),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: "ค้นหาสถานที่...",
+                          prefixIcon: Icon(Icons.search),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                        onSubmitted: (value) {
+                          if (value.isNotEmpty) {
+                            _filterMarkers(value);
+                          } else {
+                            _filterMarkers(null);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+
+                  // Keyword Filter Chips
+                  Positioned(
+                    top: 100,
+                    left: 20,
+                    right: 20,
+                    child: Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // ปุ่ม "ทั้งหมด" สำหรับแสดง markers ทั้งหมด
+                            SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: Row(
+                                children: [
+                                  // Chip สำหรับแสดงทั้งหมด
+                                  Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                    child: GestureDetector(
+                                      onTap: () => _filterMarkers(null),
+                                      child: Chip(
+                                        label: Text('ทั้งหมด'),
+                                        backgroundColor: selectedKeyword == null
+                                            ? Colors.blue[300]
+                                            : Colors.grey[200],
+                                        labelStyle: TextStyle(
+                                          color: selectedKeyword == null
+                                              ? Colors.white
+                                              : Colors.black,
+                                          fontWeight: selectedKeyword == null
+                                              ? FontWeight.bold
+                                              : FontWeight.normal,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  // Chips สำหรับ keywords
+                                  ...searchKeywords.map((keyword) {
+                                    final isSelected = selectedKeyword == keyword;
+                                    return Padding(
+                                      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                      child: GestureDetector(
+                                        onTap: () => _filterMarkers(keyword),
+                                        child: Chip(
+                                          label: Text(keyword),
+                                          backgroundColor: isSelected
+                                              ? Colors.blue[300]
+                                              : Colors.blue[100],
+                                          labelStyle: TextStyle(
+                                            color: isSelected ? Colors.white : Colors.black,
+                                            fontWeight: isSelected
+                                                ? FontWeight.bold
+                                                : FontWeight.normal,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }).toList(),
+                                ],
+                              ),
+                            ),
+                            // แสดงจำนวน markers ที่แสดงอยู่
+                            SizedBox(height: 8),
+                            Text(
+                              'แสดง ${provider.markers.length} สถานที่' +
+                                  (selectedKeyword != null ? ' (กรองด้วย: $selectedKeyword)' : ''),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}

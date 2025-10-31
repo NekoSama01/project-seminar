@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "fishing_guide_app",
+            "cwd": "fishing_guide_app",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "fishing_guide_app (profile mode)",
+            "cwd": "fishing_guide_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "fishing_guide_app (release mode)",
+            "cwd": "fishing_guide_app",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}

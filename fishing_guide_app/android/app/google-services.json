@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "512023527657",
+    "project_id": "fishingguideapp-1a98d",
+    "storage_bucket": "fishingguideapp-1a98d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:512023527657:android:2a195fcde46693d6f07078",
+        "android_client_info": {
+          "package_name": "com.example.fishing_guide_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZjfudF1p1CeDsnTOyGcEkWdiYU3Dl1J0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
