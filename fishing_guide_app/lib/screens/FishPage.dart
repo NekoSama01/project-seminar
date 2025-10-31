@@ -2,46 +2,27 @@ import 'package:fishing_guide_app/screens/detail_screens/FishDetailPage.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:fishing_guide_app/provider/fish_provider.dart';
-import 'package:shimmer/shimmer.dart'; // เพิ่ม shimmer effect
-import 'package:flutter_staggered_animations/flutter_staggered_animations.dart'; // เพิ่ม staggered animations
+import 'package:shimmer/shimmer.dart';
+import 'package:flutter_staggered_animations/flutter_staggered_animations.dart';
 
 class FishPage extends StatefulWidget {
   @override
   _FishPageState createState() => _FishPageState();
 }
 
-class _FishPageState extends State<FishPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _headerAnimation;
+class _FishPageState extends State<FishPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    _animationController = AnimationController(
-      duration: Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
-    );
-    _animationController.forward();
-  }
-
-  @override
   void dispose() {
-    _animationController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _refreshData(BuildContext context) async {
     try {
-      _animationController.reset();
       await Provider.of<FishProvider>(context, listen: false).fetchFishes();
-      _animationController.forward();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -62,7 +43,6 @@ class _FishPageState extends State<FishPage>
           duration: Duration(seconds: 3),
         ),
       );
-      debugPrint('Error refreshing fish data: $e');
     }
   }
 
@@ -91,9 +71,9 @@ class _FishPageState extends State<FishPage>
     return Container(
       decoration: BoxDecoration(
         gradient: LinearGradient(
+          colors: [Color(0xFF667eea), Color(0xFF764ba2), Color(0xFFf093fb)],
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF667eea), Color(0xFF764ba2), Color(0xFFf093fb)],
           stops: [0.0, 0.5, 1.0],
         ),
       ),
@@ -119,120 +99,108 @@ class _FishPageState extends State<FishPage>
             borderRadius: BorderRadius.circular(25),
             child: Column(
               children: [
-                // Animated Header
-                AnimatedBuilder(
-                  animation: _headerAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _headerAnimation.value,
-                      child: Container(
-                        padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                // Header (ไม่มี Animation แล้ว)
+                Container(
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF667eea).withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.waves,
+                              color: Colors.white,
+                              size: 24,
+                            ),
                           ),
+                          SizedBox(width: 12),
+                          Text(
+                            'ปลาแต่ละชนิด',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+                      // Search Bar
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: Color(0xFF667eea).withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: Offset(0, 5),
+                              color: Colors.black12,
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    Icons.waves,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                SizedBox(width: 12),
-                                Text(
-                                  'ปลาแต่ละชนิด',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.5,
-                                  ),
-                                ),
-                              ],
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged: (value) {
+                            setState(() => _searchQuery = value);
+                          },
+                          decoration: InputDecoration(
+                            hintText: 'ค้นหาปลา...',
+                            hintStyle: TextStyle(color: Colors.grey[500]),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Color(0xFF667eea),
                             ),
-                            SizedBox(height: 16),
-                            // Search Bar
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(15),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                controller: _searchController,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _searchQuery = value;
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'ค้นหาปลา...',
-                                  hintStyle: TextStyle(color: Colors.grey[500]),
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: Color(0xFF667eea),
-                                  ),
-                                  suffixIcon:
-                                      _searchQuery.isNotEmpty
-                                          ? IconButton(
-                                            icon: Icon(
-                                              Icons.clear,
-                                              color: Colors.grey[500],
-                                            ),
-                                            onPressed: () {
-                                              _searchController.clear();
-                                              setState(() {
-                                                _searchQuery = '';
-                                              });
-                                            },
-                                          )
-                                          : null,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                ),
-                              ),
+                            suffixIcon:
+                                _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                      icon: Icon(
+                                        Icons.clear,
+                                        color: Colors.grey[500],
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                    : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide.none,
                             ),
-                          ],
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
                         ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
 
-                // Fish list content
+                // Fish List
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () => _refreshData(context),
@@ -249,20 +217,13 @@ class _FishPageState extends State<FishPage>
     );
   }
 
+  // ส่วนด้านล่าง (_buildFishList, shimmer, card, info row ฯลฯ) เหมือนเดิมทั้งหมด
   Widget _buildFishList(BuildContext context, FishProvider fishProvider) {
-    if (fishProvider.isLoading) {
-      return _buildShimmerLoading();
-    }
-
-    if (fishProvider.error != null) {
-      return _buildErrorState(context);
-    }
+    if (fishProvider.isLoading) return _buildShimmerLoading();
+    if (fishProvider.error != null) return _buildErrorState(context);
 
     final filteredFish = _getFilteredFish(fishProvider);
-
-    if (filteredFish.isEmpty) {
-      return _buildEmptyState(context);
-    }
+    if (filteredFish.isEmpty) return _buildEmptyState(context);
 
     return AnimationLimiter(
       child: ListView.builder(

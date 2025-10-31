@@ -10,25 +10,13 @@ class BaitPage extends StatefulWidget {
   _BaitPageState createState() => _BaitPageState();
 }
 
-class _BaitPageState extends State<BaitPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _headerAnimation;
+class _BaitPageState extends State<BaitPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
-    );
-    _animationController.forward();
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       Provider.of<BaitProvider>(context, listen: false).fetchBaits();
     });
@@ -36,16 +24,13 @@ class _BaitPageState extends State<BaitPage>
 
   @override
   void dispose() {
-    _animationController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _refreshData(BuildContext context) async {
     try {
-      _animationController.reset();
       await Provider.of<BaitProvider>(context, listen: false).fetchBaits();
-      _animationController.forward();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -66,7 +51,6 @@ class _BaitPageState extends State<BaitPage>
           duration: Duration(seconds: 3),
         ),
       );
-      debugPrint('Error refreshing bait data: $e');
     }
   }
 
@@ -126,138 +110,124 @@ class _BaitPageState extends State<BaitPage>
             borderRadius: BorderRadius.circular(25),
             child: Column(
               children: [
-                // Animated Header
-                AnimatedBuilder(
-                  animation: _headerAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _headerAnimation.value,
-                      child: Container(
-                        padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Color(0xFF11998e).withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: Offset(0, 5),
+                // 🔹 Header แบบไม่มี Animation
+                Container(
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF11998e), Color(0xFF38ef7d)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF11998e).withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          children: [
-                            Row(
+                            child: Icon(
+                              Icons.set_meal_outlined,
+                              color: Colors.white,
+                              size: 24,
+                            ),
+                          ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    Icons.set_meal_outlined,
+                                Text(
+                                  'เหยื่อตกปลาแต่ละชนิด',
+                                  style: TextStyle(
                                     color: Colors.white,
-                                    size: 24,
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.w700,
+                                    letterSpacing: 0.5,
                                   ),
                                 ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'เหยื่อตกปลาแต่ละชนิด',
-                                        style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 22,
-                                          fontWeight: FontWeight.w700,
-                                          letterSpacing: 0.5,
-                                        ),
-                                      ),
-                                      SizedBox(height: 4),
-                                      Text(
-                                        baitProvider.baitList?.length != null
-                                            ? 'ทั้งหมด ${baitProvider.baitList!.length} รายการ'
-                                            : 'กำลังโหลดข้อมูล...',
-                                        style: TextStyle(
-                                          color: Colors.white.withOpacity(0.9),
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                    ],
+                                SizedBox(height: 4),
+                                Text(
+                                  baitProvider.baitList?.length != null
+                                      ? 'ทั้งหมด ${baitProvider.baitList!.length} รายการ'
+                                      : 'กำลังโหลดข้อมูล...',
+                                  style: TextStyle(
+                                    color: Colors.white.withOpacity(0.9),
+                                    fontSize: 14,
                                   ),
                                 ),
                               ],
                             ),
-                            SizedBox(height: 16),
-                            // Search Bar
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(15),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                controller: _searchController,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _searchQuery = value;
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'ค้นหาเหยื่อตกปลา...',
-                                  hintStyle: TextStyle(color: Colors.grey[500]),
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: Color(0xFF11998e),
-                                  ),
-                                  suffixIcon:
-                                      _searchQuery.isNotEmpty
-                                          ? IconButton(
-                                            icon: Icon(
-                                              Icons.clear,
-                                              color: Colors.grey[500],
-                                            ),
-                                            onPressed: () {
-                                              _searchController.clear();
-                                              setState(() {
-                                                _searchQuery = '';
-                                              });
-                                            },
-                                          )
-                                          : null,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                ),
-                              ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+                      // 🔹 Search Bar
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
                             ),
                           ],
                         ),
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged:
+                              (value) => setState(() => _searchQuery = value),
+                          decoration: InputDecoration(
+                            hintText: 'ค้นหาเหยื่อตกปลา...',
+                            hintStyle: TextStyle(color: Colors.grey[500]),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Color(0xFF11998e),
+                            ),
+                            suffixIcon:
+                                _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                      icon: Icon(
+                                        Icons.clear,
+                                        color: Colors.grey[500],
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                    : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
 
-                // Bait list content
+                // 🔹 ส่วนแสดงรายการ
                 Expanded(
                   child: RefreshIndicator(
                     onRefresh: () => _refreshData(context),
@@ -274,20 +244,14 @@ class _BaitPageState extends State<BaitPage>
     );
   }
 
+  // 🔸 ส่วนด้านล่างทั้งหมดเหมือนเดิม
   Widget _buildBaitList(BuildContext context, BaitProvider baitProvider) {
-    if (baitProvider.isLoading) {
-      return _buildShimmerLoading();
-    }
-
-    if (baitProvider.error != null) {
+    if (baitProvider.isLoading) return _buildShimmerLoading();
+    if (baitProvider.error != null)
       return _buildErrorState(context, baitProvider.error!);
-    }
 
     final filteredBait = _getFilteredBait(baitProvider);
-
-    if (filteredBait.isEmpty) {
-      return _buildEmptyState(context);
-    }
+    if (filteredBait.isEmpty) return _buildEmptyState(context);
 
     return AnimationLimiter(
       child: ListView.builder(

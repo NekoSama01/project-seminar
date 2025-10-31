@@ -10,24 +10,10 @@ class FishLogPage extends StatefulWidget {
   _FishLogPageState createState() => _FishLogPageState();
 }
 
-class _FishLogPageState extends State<FishLogPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _headerAnimation;
-
+class _FishLogPageState extends State<FishLogPage> {
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _headerAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.easeOutBack),
-    );
-    _animationController.forward();
-
-    // เริ่ม stream subscription
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final fishLogProvider = Provider.of<FishLogProvider>(
         context,
@@ -37,29 +23,13 @@ class _FishLogPageState extends State<FishLogPage>
     });
   }
 
-  @override
-  void dispose() {
-    _animationController.dispose();
-    super.dispose();
-  }
-
   Future<void> _refreshData() async {
     try {
-      // รีเซ็ต animation อย่างปลอดภัย
-      if (mounted && _animationController.isCompleted) {
-        _animationController.reset();
-      }
-
       final fishLogProvider = Provider.of<FishLogProvider>(
         context,
         listen: false,
       );
       await fishLogProvider.fetchFishLogs();
-
-      // เริ่ม animation ใหม่
-      if (mounted) {
-        _animationController.forward();
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -93,11 +63,8 @@ class _FishLogPageState extends State<FishLogPage>
         arguments: documentId,
       );
 
-      // ถ้าแก้ไขสำเร็จ ให้รีเฟรชข้อมูล
       if (result == true && mounted) {
-        await Future.delayed(
-          Duration(milliseconds: 300),
-        ); // รอให้ navigation เสร็จ
+        await Future.delayed(Duration(milliseconds: 300));
         await _refreshData();
       }
     } catch (e) {
@@ -153,19 +120,8 @@ class _FishLogPageState extends State<FishLogPage>
                 borderRadius: BorderRadius.circular(25),
                 child: Column(
                   children: [
-                    // Animated Header - ใช้ปลอดภัยขึ้น
-                    AnimatedBuilder(
-                      animation: _headerAnimation,
-                      builder: (context, child) {
-                        return Transform.scale(
-                          scale: _headerAnimation.value.clamp(
-                            0.0,
-                            1.0,
-                          ), // จำกัดค่า
-                          child: _buildHeader(),
-                        );
-                      },
-                    ),
+                    // Header (ไม่มี animation แล้ว)
+                    _buildHeader(),
 
                     // Fish logs list
                     Expanded(
@@ -175,23 +131,19 @@ class _FishLogPageState extends State<FishLogPage>
                         backgroundColor: Colors.white,
                         child: Consumer<FishLogProvider>(
                           builder: (context, fishLogProvider, child) {
-                            // แสดง loading state
                             if (fishLogProvider.isLoading) {
                               return _buildLoadingState();
                             }
 
-                            // แสดง error state
                             if (fishLogProvider.error != null) {
                               return _buildErrorState(fishLogProvider.error!);
                             }
 
-                            // แสดง empty state
                             if (fishLogProvider.fishLogList == null ||
                                 fishLogProvider.fishLogList!.isEmpty) {
                               return _buildEmptyState();
                             }
 
-                            // แสดงรายการบันทึก
                             return AnimationLimiter(
                               child: ListView.builder(
                                 padding: EdgeInsets.fromLTRB(16, 8, 16, 20),
@@ -218,9 +170,7 @@ class _FishLogPageState extends State<FishLogPage>
                                               data['username'] ??
                                               'Unknown User',
                                           onEditPressed:
-                                              () => _navigateToEdit(
-                                                doc.id,
-                                              ), // เพิ่ม callback
+                                              () => _navigateToEdit(doc.id),
                                         ),
                                       ),
                                     ),
@@ -298,7 +248,6 @@ class _FishLogPageState extends State<FishLogPage>
               ],
             ),
           ),
-          // Add Button
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(

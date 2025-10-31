@@ -11,50 +11,29 @@ class BookPage extends StatefulWidget {
   State<BookPage> createState() => _BookPageState();
 }
 
-class _BookPageState extends State<BookPage>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _animationController;
-  late Animation<double> _headerAnimation;
+class _BookPageState extends State<BookPage> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _animationController = AnimationController(
-      duration: Duration(milliseconds: 1200),
-      vsync: this,
-    );
-    _headerAnimation = Tween<double>(
-      begin: 0.0,
-      end: 1.0,
-    ).animate(CurvedAnimation(
-      parent: _animationController,
-      curve: Curves.easeOutBack,
-    ));
-    _animationController.forward();
-    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final stepsProvider = Provider.of<StepsProvider>(context, listen: false);
-      // เรียกใช้ fetchSteps() เพื่อโหลดข้อมูล
       stepsProvider.fetchSteps();
-      // Debug info
       stepsProvider.debugInfo();
     });
   }
 
   @override
   void dispose() {
-    _animationController.dispose();
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _refreshData(BuildContext context) async {
     try {
-      _animationController.reset();
       await Provider.of<StepsProvider>(context, listen: false).refreshSteps();
-      _animationController.forward();
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -69,7 +48,9 @@ class _BookPageState extends State<BookPage>
           ),
           backgroundColor: Colors.red[600],
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           duration: Duration(seconds: 3),
         ),
       );
@@ -81,19 +62,21 @@ class _BookPageState extends State<BookPage>
     if (stepsProvider.steps.isEmpty || _searchQuery.isEmpty) {
       return stepsProvider.steps;
     }
-    
+
     return stepsProvider.steps.where((step) {
-      final documentTitle = stepsProvider.getDocumentTitle(step.id).toLowerCase();
+      final documentTitle =
+          stepsProvider.getDocumentTitle(step.id).toLowerCase();
       final searchLower = _searchQuery.toLowerCase();
-      
-      // ค้นหาในชื่อเอกสาร และข้อมูลใน fields
+
       bool matchesTitle = documentTitle.contains(searchLower);
       bool matchesContent = step.data.entries.any((entry) {
-        final fieldName = stepsProvider.getFieldDisplayName(entry.key).toLowerCase();
+        final fieldName =
+            stepsProvider.getFieldDisplayName(entry.key).toLowerCase();
         final fieldValue = entry.value.toString().toLowerCase();
-        return fieldName.contains(searchLower) || fieldValue.contains(searchLower);
+        return fieldName.contains(searchLower) ||
+            fieldValue.contains(searchLower);
       });
-      
+
       return matchesTitle || matchesContent;
     }).toList();
   }
@@ -105,11 +88,7 @@ class _BookPageState extends State<BookPage>
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF667eea),
-            Color(0xFF764ba2),
-            Color(0xFF9b59b6),
-          ],
+          colors: [Color(0xFF667eea), Color(0xFF764ba2), Color(0xFF9b59b6)],
           stops: [0.0, 0.6, 1.0],
         ),
       ),
@@ -136,137 +115,128 @@ class _BookPageState extends State<BookPage>
             borderRadius: BorderRadius.circular(25),
             child: Column(
               children: [
-                // Animated Header
-                AnimatedBuilder(
-                  animation: _headerAnimation,
-                  builder: (context, child) {
-                    return Transform.scale(
-                      scale: _headerAnimation.value,
-                      child: Container(
-                        padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [Color(0xFF667eea), Color(0xFF764ba2)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
+                // 🔹 Header แบบไม่มี Animation
+                Container(
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [Color(0xFF667eea), Color(0xFF764ba2)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Color(0xFF667eea).withOpacity(0.3),
+                        blurRadius: 15,
+                        offset: Offset(0, 5),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Icon(
+                              Icons.menu_book,
+                              color: Colors.white,
+                              size: 24,
+                            ),
                           ),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Consumer<StepsProvider>(
+                              builder: (context, stepsProvider, child) {
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      'คู่มือการใช้เหยื่อตกปลา',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 0.5,
+                                      ),
+                                    ),
+                                    SizedBox(height: 4),
+                                    Text(
+                                      stepsProvider.hasData
+                                          ? 'ทั้งหมด ${stepsProvider.steps.length} รายการ'
+                                          : 'กำลังโหลดข้อมูล...',
+                                      style: TextStyle(
+                                        color: Colors.white.withOpacity(0.9),
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 16),
+                      // 🔹 Search Bar
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: Color(0xFF667eea).withOpacity(0.3),
-                              blurRadius: 15,
-                              offset: Offset(0, 5),
+                              color: Colors.black12,
+                              blurRadius: 8,
+                              offset: Offset(0, 2),
                             ),
                           ],
                         ),
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  child: Icon(
-                                    Icons.menu_book,
-                                    color: Colors.white,
-                                    size: 24,
-                                  ),
-                                ),
-                                SizedBox(width: 12),
-                                Expanded(
-                                  child: Consumer<StepsProvider>(
-                                    builder: (context, stepsProvider, child) {
-                                      return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            'คู่มือการใช้เหยื่อตกปลา',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.w700,
-                                              letterSpacing: 0.5,
-                                            ),
-                                          ),
-                                          SizedBox(height: 4),
-                                          Text(
-                                            stepsProvider.hasData 
-                                              ? 'ทั้งหมด ${stepsProvider.steps.length} รายการ'
-                                              : 'กำลังโหลดข้อมูล...',
-                                            style: TextStyle(
-                                              color: Colors.white.withOpacity(0.9),
-                                              fontSize: 14,
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ],
+                        child: TextField(
+                          controller: _searchController,
+                          onChanged:
+                              (value) => setState(() => _searchQuery = value),
+                          decoration: InputDecoration(
+                            hintText: 'ค้นหาคู่มือ...',
+                            hintStyle: TextStyle(color: Colors.grey[500]),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Color(0xFF667eea),
                             ),
-                            SizedBox(height: 16),
-                            // Search Bar
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(15),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black12,
-                                    blurRadius: 8,
-                                    offset: Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: TextField(
-                                controller: _searchController,
-                                onChanged: (value) {
-                                  setState(() {
-                                    _searchQuery = value;
-                                  });
-                                },
-                                decoration: InputDecoration(
-                                  hintText: 'ค้นหาคู่มือ...',
-                                  hintStyle: TextStyle(color: Colors.grey[500]),
-                                  prefixIcon: Icon(
-                                    Icons.search,
-                                    color: Color(0xFF667eea),
-                                  ),
-                                  suffixIcon: _searchQuery.isNotEmpty
-                                      ? IconButton(
-                                          icon: Icon(Icons.clear, color: Colors.grey[500]),
-                                          onPressed: () {
-                                            _searchController.clear();
-                                            setState(() {
-                                              _searchQuery = '';
-                                            });
-                                          },
-                                        )
-                                      : null,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(15),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 12,
-                                  ),
-                                ),
-                              ),
+                            suffixIcon:
+                                _searchQuery.isNotEmpty
+                                    ? IconButton(
+                                      icon: Icon(
+                                        Icons.clear,
+                                        color: Colors.grey[500],
+                                      ),
+                                      onPressed: () {
+                                        _searchController.clear();
+                                        setState(() => _searchQuery = '');
+                                      },
+                                    )
+                                    : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(15),
+                              borderSide: BorderSide.none,
                             ),
-                          ],
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
                         ),
                       ),
-                    );
-                  },
+                    ],
+                  ),
                 ),
 
-                // Steps list content
+                // 🔹 ส่วนแสดงรายการ
                 Expanded(
                   child: Consumer<StepsProvider>(
                     builder: (context, stepsProvider, child) {
@@ -353,11 +323,7 @@ class _BookPageState extends State<BookPage>
                     ),
                   ),
                   SizedBox(height: 16),
-                  Container(
-                    height: 16,
-                    width: 150,
-                    color: Colors.white,
-                  ),
+                  Container(height: 16, width: 150, color: Colors.white),
                   SizedBox(height: 8),
                   Container(
                     height: 60,
@@ -365,11 +331,7 @@ class _BookPageState extends State<BookPage>
                     color: Colors.white,
                   ),
                   SizedBox(height: 8),
-                  Container(
-                    height: 16,
-                    width: 200,
-                    color: Colors.white,
-                  ),
+                  Container(height: 16, width: 200, color: Colors.white),
                 ],
               ),
             ),
@@ -390,11 +352,7 @@ class _BookPageState extends State<BookPage>
               color: Colors.red[50],
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              Icons.error_outline,
-              color: Colors.red[400],
-              size: 60,
-            ),
+            child: Icon(Icons.error_outline, color: Colors.red[400], size: 60),
           ),
           SizedBox(height: 20),
           Text(
@@ -408,10 +366,7 @@ class _BookPageState extends State<BookPage>
           SizedBox(height: 8),
           Text(
             'ไม่สามารถโหลดข้อมูลคู่มือได้',
-            style: TextStyle(
-              color: Colors.grey[600],
-              fontSize: 16,
-            ),
+            style: TextStyle(color: Colors.grey[600], fontSize: 16),
             textAlign: TextAlign.center,
           ),
           SizedBox(height: 24),
@@ -446,7 +401,9 @@ class _BookPageState extends State<BookPage>
               shape: BoxShape.circle,
             ),
             child: Icon(
-              _searchQuery.isNotEmpty ? Icons.search_off : Icons.menu_book_outlined,
+              _searchQuery.isNotEmpty
+                  ? Icons.search_off
+                  : Icons.menu_book_outlined,
               color: Colors.grey[400],
               size: 60,
             ),
@@ -462,13 +419,10 @@ class _BookPageState extends State<BookPage>
           ),
           SizedBox(height: 8),
           Text(
-            _searchQuery.isNotEmpty 
+            _searchQuery.isNotEmpty
                 ? 'ลองค้นหาด้วยคำอื่น'
                 : 'กดรีเฟรชเพื่อโหลดข้อมูลใหม่',
-            style: TextStyle(
-              color: Colors.grey[500],
-              fontSize: 14,
-            ),
+            style: TextStyle(color: Colors.grey[500], fontSize: 14),
           ),
           SizedBox(height: 20),
           if (_searchQuery.isEmpty)
@@ -476,9 +430,7 @@ class _BookPageState extends State<BookPage>
               onPressed: () => _refreshData(context),
               icon: Icon(Icons.refresh),
               label: Text('รีเฟรชข้อมูล'),
-              style: TextButton.styleFrom(
-                foregroundColor: Color(0xFF667eea),
-              ),
+              style: TextButton.styleFrom(foregroundColor: Color(0xFF667eea)),
             ),
         ],
       ),
@@ -516,16 +468,10 @@ class _BookPageState extends State<BookPage>
               gradient: LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
-                colors: [
-                  Colors.white,
-                  Colors.blue.shade50,
-                ],
+                colors: [Colors.white, Colors.blue.shade50],
               ),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.grey[200]!,
-                width: 1,
-              ),
+              border: Border.all(color: Colors.grey[200]!, width: 1),
             ),
             child: Padding(
               padding: EdgeInsets.all(20),
@@ -552,11 +498,7 @@ class _BookPageState extends State<BookPage>
                     ),
                     child: Row(
                       children: [
-                        Icon(
-                          Icons.menu_book,
-                          color: Colors.white,
-                          size: 20,
-                        ),
+                        Icon(Icons.menu_book, color: Colors.white, size: 20),
                         SizedBox(width: 8),
                         Expanded(
                           child: Text(
@@ -572,19 +514,24 @@ class _BookPageState extends State<BookPage>
                       ],
                     ),
                   ),
-                  
+
                   const SizedBox(height: 16),
-                  
+
                   // แสดงจำนวน fields และ preview
                   _buildFieldsPreview(step, stepsProvider),
-                  
+
                   SizedBox(height: 12),
-                  
+
                   // Action button
                   Container(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () => _showStepDetailDialog(context, step, stepsProvider),
+                      onPressed:
+                          () => _showStepDetailDialog(
+                            context,
+                            step,
+                            stepsProvider,
+                          ),
                       icon: Icon(Icons.visibility, size: 18),
                       label: Text('ดูรายละเอียด'),
                       style: ElevatedButton.styleFrom(
@@ -609,66 +556,72 @@ class _BookPageState extends State<BookPage>
 
   Widget _buildFieldsPreview(dynamic step, StepsProvider stepsProvider) {
     final fields = step.data.entries.take(2).toList(); // แสดงแค่ 2 fields แรก
-    
+
     return Column(
-      children: fields.map<Widget>((entry) {
-        final fieldName = entry.key;
-        final fieldValue = entry.value.toString();
-        final preview = fieldValue.length > 100 
-            ? '${fieldValue.substring(0, 100)}...'
-            : fieldValue;
-        
-        return Container(
-          margin: EdgeInsets.only(bottom: 12),
-          padding: EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Icon(
-                _getFieldIcon(fieldName),
-                color: stepsProvider.getHeaderColor(step.id),
-                size: 18,
+      children:
+          fields.map<Widget>((entry) {
+            final fieldName = entry.key;
+            final fieldValue = entry.value.toString();
+            final preview =
+                fieldValue.length > 100
+                    ? '${fieldValue.substring(0, 100)}...'
+                    : fieldValue;
+
+            return Container(
+              margin: EdgeInsets.only(bottom: 12),
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade200),
               ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stepsProvider.getFieldDisplayName(fieldName),
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.blue.shade800,
-                      ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    _getFieldIcon(fieldName),
+                    color: stepsProvider.getHeaderColor(step.id),
+                    size: 18,
+                  ),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          stepsProvider.getFieldDisplayName(fieldName),
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blue.shade800,
+                          ),
+                        ),
+                        SizedBox(height: 4),
+                        Text(
+                          preview,
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[600],
+                            height: 1.4,
+                          ),
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
-                    SizedBox(height: 4),
-                    Text(
-                      preview,
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.grey[600],
-                        height: 1.4,
-                      ),
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-      }).toList(),
+            );
+          }).toList(),
     );
   }
 
-  void _showStepDetailDialog(BuildContext context, dynamic step, StepsProvider stepsProvider) {
+  void _showStepDetailDialog(
+    BuildContext context,
+    dynamic step,
+    StepsProvider stepsProvider,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -714,64 +667,71 @@ class _BookPageState extends State<BookPage>
                     ],
                   ),
                 ),
-                
+
                 // Content
                 Flexible(
                   child: SingleChildScrollView(
                     padding: EdgeInsets.all(20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: step.data.entries.map<Widget>((entry) {
-                        final fieldName = entry.key;
-                        final fieldValue = entry.value.toString();
-                        
-                        return Container(
-                          margin: EdgeInsets.only(bottom: 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
+                      children:
+                          step.data.entries.map<Widget>((entry) {
+                            final fieldName = entry.key;
+                            final fieldValue = entry.value.toString();
+
+                            return Container(
+                              margin: EdgeInsets.only(bottom: 16),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Icon(
-                                    _getFieldIcon(fieldName),
-                                    color: stepsProvider.getHeaderColor(step.id),
-                                    size: 20,
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        _getFieldIcon(fieldName),
+                                        color: stepsProvider.getHeaderColor(
+                                          step.id,
+                                        ),
+                                        size: 20,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          stepsProvider.getFieldDisplayName(
+                                            fieldName,
+                                          ),
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.blue.shade800,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                  SizedBox(width: 8),
-                                  Expanded(
+                                  SizedBox(height: 8),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: EdgeInsets.all(16),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey.shade50,
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                        color: Colors.grey.shade200,
+                                      ),
+                                    ),
                                     child: Text(
-                                      stepsProvider.getFieldDisplayName(fieldName),
+                                      fieldValue,
                                       style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.blue.shade800,
+                                        fontSize: 14,
+                                        height: 1.5,
+                                        color: Colors.black87,
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 8),
-                              Container(
-                                width: double.infinity,
-                                padding: EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(color: Colors.grey.shade200),
-                                ),
-                                child: Text(
-                                  fieldValue,
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    height: 1.5,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
+                            );
+                          }).toList(),
                     ),
                   ),
                 ),

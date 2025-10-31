@@ -23,10 +23,6 @@ class FishLogProvider extends ChangeNotifier {
   void initializeFishLogStream() {
     final userId = currentUserId;
 
-    // 🔍 เพิ่ม Debug
-    print('🔍 Debug: Current User ID = $userId');
-    print('🔍 Debug: Current User = ${_auth.currentUser?.email}');
-
     if (userId == null) {
       _error = 'ไม่พบข้อมูลผู้ใช้ กรุณาเข้าสู่ระบบ';
       print('❌ Debug: No user found');
@@ -36,8 +32,6 @@ class FishLogProvider extends ChangeNotifier {
 
     _setLoading(true);
     _clearError();
-
-    print('🔍 Debug: Starting stream for userId: $userId');
 
     _fishLogSubscription = _firestore
         .collection('fishlogs')
